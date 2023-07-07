@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "273495084079",
+    "project_id": "strading-5e3de",
+    "storage_bucket": "strading-5e3de.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273495084079:android:b32ce27d9b401233d08ada",
+        "android_client_info": {
+          "package_name": "com.sahcreator.s_trading"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "273495084079-o7q2mu7gegrgbrrn73ulkg47o0s52mls.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfjoeOBYFDK0JVGhl6c-apg6UEU-6UkPo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "273495084079-o7q2mu7gegrgbrrn73ulkg47o0s52mls.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
