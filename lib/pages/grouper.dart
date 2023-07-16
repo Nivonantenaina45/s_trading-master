@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/colis_list.dart';
 import '../model/colis_model.dart';
 import 'ajout_grouper.dart';
+import 'listes_colis_grouper.dart';
 
 class Grouper extends StatefulWidget {
   const Grouper({Key? key}) : super(key: key);
@@ -14,10 +16,10 @@ class Grouper extends StatefulWidget {
 }
 
 class _GrouperState extends State<Grouper> {
-  final _colisStream =
-      FirebaseFirestore.instance.collection("colisGrouper").snapshots();
+  final _colisStream = FirebaseFirestore.instance.collection("colisGrouper");
+  FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+
   String tracking = "";
-  final _formKey = GlobalKey<FormState>();
   final codeclientEditingController = TextEditingController();
   final trackingCartonEditingController = TextEditingController();
   final trackingEditingController = TextEditingController();
@@ -29,147 +31,147 @@ class _GrouperState extends State<Grouper> {
     'Retour en chine',
   ];
   var selectedtype;
-  ColisModel colisModel = ColisModel();
+  ColisModel colisrep = ColisModel();
+  ColisCodebarre colisCodebarre = ColisCodebarre();
+  User? user = FirebaseAuth.instance.currentUser;
 
-  @override
   void initState() {
     super.initState();
     FirebaseFirestore.instance
         .collection("colisDetails")
-        .doc("JyVSFR7VOLJND5Hcibq9")
+        .doc(user!.uid)
         .get()
         .then((value) {
-      colisModel = ColisModel.fromMap(value.data());
+      colisrep = ColisModel.fromMap(value.data());
       setState(() {});
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final trackingCartonfield = TextFormField(
-        enabled: false,
-        autofocus: false,
-        controller: trackingCartonEditingController,
-        keyboardType: TextInputType.name,
-        validator: (value) {
-          if (value!.isEmpty) {
-            return ("tracking carton  obligatoire");
-          }
-          return null;
-        },
-        onSaved: (value) {
-          trackingCartonEditingController.text = value!;
-        },
-        textInputAction: TextInputAction.next,
-        decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lan),
-            contentPadding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
-            hintText: "tracking Carton",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            )));
-    final trackingfield = TextFormField(
-        autofocus: false,
-        enabled: false,
-        controller: trackingEditingController,
-        keyboardType: TextInputType.name,
-        validator: (value) {
-          if (value!.isEmpty) {
-            return ("tracking carton  obligatoire");
-          }
-          return null;
-        },
-        onSaved: (value) {
-          trackingEditingController.text = value!;
-        },
-        textInputAction: TextInputAction.next,
-        decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.water),
-            contentPadding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
-            hintText: "tracking",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            )));
-
-    final etat = DropdownButton(
-      items: _etat
-          .map((value) => DropdownMenuItem(
-                value: value,
-                child: Text(
-                  value,
-                  style: const TextStyle(color: Colors.black54),
-                ),
-              ))
-          .toList(),
-      onChanged: (selectedetat) {
-        if (kDebugMode) {
-          print('$selectedetat');
-        }
-        setState(() {
-          selectedtype = selectedetat;
-        });
-      },
-      value: selectedtype,
-      isExpanded: false,
-      hint: const Text(
-        'Choisisez un Etat',
-        style: TextStyle(color: Colors.black54),
-      ),
-    );
-    final changeButton = Material(
-      elevation: 5,
-      borderRadius: BorderRadius.circular(30),
-      color: Colors.blue,
-      child: MaterialButton(
-        padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-        //minWidth: MediaQuery.of(context).size.width,
-        onPressed: () {
-          postDetailsToFirestore();
-          synchro();
-          Navigator.pop(context);
-        },
-        child: const Text(
-          "Changer",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-
-    Widget updateWidgets() => Container(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              trackingCartonfield,
-              const SizedBox(
-                height: 15,
+    Future<void> _update([DocumentSnapshot? documentSnapshot]) async {
+      await showModalBottomSheet(
+          isScrollControlled: true,
+          context: context,
+          builder: (BuildContext ctx) {
+            return Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  TextFormField(
+                      enabled: false,
+                      autofocus: false,
+                      controller: trackingEditingController,
+                      keyboardType: TextInputType.name,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                          prefixIcon:
+                              const Icon(Icons.confirmation_num_rounded),
+                          contentPadding:
+                              const EdgeInsets.fromLTRB(15, 10, 15, 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ))),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  TextFormField(
+                      enabled: false,
+                      autofocus: false,
+                      controller: trackingCartonEditingController,
+                      keyboardType: TextInputType.name,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.code),
+                          contentPadding:
+                              const EdgeInsets.fromLTRB(15, 10, 15, 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ))),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  DropdownButton(
+                    items: _etat
+                        .map((value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (selectedetat) {
+                      if (kDebugMode) {
+                        print('$selectedetat');
+                      }
+                      setState(() {
+                        selectedtype = selectedetat;
+                      });
+                    },
+                    value: selectedtype,
+                    isExpanded: false,
+                    hint: const Text(
+                      'Choisisez un Etat',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  Material(
+                    elevation: 5,
+                    borderRadius: BorderRadius.circular(30),
+                    color: Colors.blue,
+                    child: MaterialButton(
+                      padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
+                      //minWidth: MediaQuery.of(context).size.width,
+                      onPressed: () {
+                        colisCodebarre.etat = selectedtype;
+                        _colisStream
+                            .doc(documentSnapshot!.id)
+                            .update({'etat': selectedtype});
+                        Fluttertoast.showToast(
+                            msg: "L'etat du carton a été modifié avec succés");
+                        updateCollectionsIfConditionMet();
+                        /*if (colisCodebarre.tracking == colisModel.tracking) {
+                          final colisref1 =
+                              firebaseFirestore.collection("colisDetails");
+                          colisModel.etat = selectedtype;
+                          colisref1
+                              .doc(documentSnapshot!.id)
+                              .update({'etat': selectedtype});
+                          Fluttertoast.showToast(
+                              msg: "L'etat du petit colis a été modifié");
+                        }*/
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text(
+                        "changer",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(
-                height: 15,
-              ),
-              trackingfield,
-              const SizedBox(
-                height: 15,
-              ),
-              etat,
-              const SizedBox(
-                height: 5,
-              ),
-              changeButton,
-            ],
-          ),
-        );
+            );
+          });
+    }
 
     return Scaffold(
       appBar: AppBar(
           title: Card(
         child: TextField(
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
               prefixIcon: Icon(Icons.search), hintText: 'Recherche...'),
           onChanged: (val) {
             setState(() {
@@ -179,22 +181,23 @@ class _GrouperState extends State<Grouper> {
         ),
       )),
       body: StreamBuilder(
-        stream: _colisStream,
+        stream: _colisStream.snapshots(),
         builder: (context, snapshot) {
           var docs = snapshot.data!.docs;
+
           return (snapshot.connectionState == ConnectionState.waiting)
-              ? Center(
+              ? const Center(
                   child: CircularProgressIndicator(),
                 )
+
               : ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
+                    final DocumentSnapshot documentSnapshot = docs[index];
                     if (tracking.isEmpty) {
-                      return ListTile(
-                        title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text(
+                      return Card(
+                          child: ListTile(
+                              title: Text(
                                 docs[index]['trackingCarton'],
                                 style: const TextStyle(
                                   fontSize: 22,
@@ -202,17 +205,17 @@ class _GrouperState extends State<Grouper> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              IconButton(
+                              subtitle: Text(
+                                docs[index]['etat'],
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: IconButton(
                                   onPressed: () {
-                                    showModalBottomSheet(
-                                        isScrollControlled: true,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(20),
-                                          ),
-                                        ),
-                                        context: context,
-                                        builder: (context) => updateWidgets());
+                                    _update(documentSnapshot);
                                     trackingEditingController.text =
                                         snapshot.data!.docs[index]['tracking'];
                                     trackingCartonEditingController.text =
@@ -221,64 +224,40 @@ class _GrouperState extends State<Grouper> {
                                     selectedtype =
                                         snapshot.data!.docs[index]['etat'];
                                   },
-                                  icon: Icon(Icons.edit, color: Colors.blue))
-                            ]),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              docs[index]['tracking'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              docs[index]['etat'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                                  icon: Icon(Icons.edit, color: Colors.blue)),
+                              onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ListColis(doc: documentSnapshot),
+                                        ),
+                                      );
+
+                              }));
                     }
                     if (docs[index]['trackingCarton']
                         .toString()
                         .toLowerCase()
                         .startsWith(tracking.toLowerCase())) {
-                      return ListTile(
-                        title: Text(
-                          docs[index]['trackingCarton'],
-                          style: const TextStyle(
-                            fontSize: 22,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.bold,
+                      return Card(
+                        child: ListTile(
+                          title: Text(
+                            docs[index]['trackingCarton'],
+                            style: const TextStyle(
+                              fontSize: 22,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              docs[index]['tracking'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          subtitle: Text(
+                            docs[index]['etat'],
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
                             ),
-                            Text(
-                              docs[index]['etat'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       );
                     }
@@ -295,35 +274,31 @@ class _GrouperState extends State<Grouper> {
       ),
     );
   }
+  void updateCollectionsIfConditionMet() async {
+    try {
+      // Get a Firestore instance
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  postDetailsToFirestore() async {
-    //calling our firestore
-    //calling our user model
-    //sending these values
-    FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+      // Start a batch write
+      WriteBatch batch = firestore.batch();
 
-    ColisCodebarre colisCodebarre = ColisCodebarre();
+      // Step 1: Retrieve the data that matches the condition from both collections
+      QuerySnapshot collection1Snapshot =
+      await firestore.collection('colisDetails').where('tracking', isEqualTo: trackingEditingController.text).get();
 
-    //writing all the value
-    colisCodebarre.tracking = trackingEditingController.text;
-    colisCodebarre.trackingCarton = trackingCartonEditingController.text;
-    colisCodebarre.etat = selectedtype;
-    colisModel.etat = selectedtype;
+      // Step 2: Check if both documents are found
+      if (collection1Snapshot.docs.isNotEmpty ) {
+        // Step 3: Perform updates in both collections
+        batch.update(collection1Snapshot.docs[0].reference, {'etat': selectedtype});
 
-    await firebaseFirestore
-        .collection("colisGrouper")
-        .doc("ymVB2yGZrc9Ctdq6EK9j")
-        .update(colisCodebarre.toMap());
-    Fluttertoast.showToast(msg: "L'etat du carton a été modifié avec succés");
-  }
-
-  void synchro() async {
-    FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
-    colisModel.etat = selectedtype;
-    await firebaseFirestore
-        .collection("colisDetails")
-        .doc("JyVSFR7VOLJND5Hcibq9")
-        .update({'etat': selectedtype});
-    Fluttertoast.showToast(msg: "L'etat du petit colis a été modifié");
+        // Step 4: Commit the batched write
+        await batch.commit();
+        print('Batch write successfully committed.');
+      } else {
+        print('Documents not found or condition not met. Batch write aborted.');
+      }
+    } catch (e) {
+      print('Error performing batch write: $e');
+    }
   }
 }

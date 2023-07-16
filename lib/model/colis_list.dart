@@ -5,7 +5,7 @@ class ColisCodebarre {
   String? trackingCarton;
   String? etat;
 
-  ColisCodebarre({this.tracking, this.trackingCarton, this.etat});
+  ColisCodebarre( {this.tracking, this.trackingCarton, this.etat});
 
   factory ColisCodebarre.fromMap(map) {
     return ColisCodebarre(

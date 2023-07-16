@@ -1,6 +1,7 @@
 import 'dart:ffi';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
@@ -8,6 +9,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../model/colis_model.dart';
+
 
 class Add extends StatefulWidget {
   const Add({Key? key}) : super(key: key);
@@ -18,7 +20,6 @@ class Add extends StatefulWidget {
 
 class _State extends State<Add> {
   String barcode = '69563258O';
-  String? pesage;
   final _formKey = GlobalKey<FormState>();
   final codeclientEditingController = TextEditingController();
   final poidsEditingController = TextEditingController();
@@ -39,7 +40,7 @@ class _State extends State<Add> {
 
   @override
   Widget build(BuildContext context) {
-    final codeclientfield = TextFormField(
+    final codeclient = TextFormField(
         autofocus: false,
         controller: codeclientEditingController,
         keyboardType: TextInputType.name,
@@ -173,7 +174,7 @@ class _State extends State<Add> {
         style: TextStyle(color: Colors.black54),
       ),
     );
-   
+
     final addButton = Material(
       elevation: 5,
       borderRadius: BorderRadius.circular(30),
@@ -247,7 +248,7 @@ class _State extends State<Add> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       scanBarcode();
                     },
                     child: const Text("Scan"),
@@ -255,7 +256,7 @@ class _State extends State<Add> {
                 ],
               ),
               const SizedBox(height: 15),
-              codeclientfield,
+              codeclient,
               const SizedBox(height: 15),
               poidsfield,
               const SizedBox(height: 15),
@@ -314,10 +315,37 @@ class _State extends State<Add> {
 
     if (!mounted) return;
 
-    setState(() {
+    setState(() async {
       this.barcode = barcode;
     });
+
+    CollectionReference collectionReference =
+    FirebaseFirestore.instance.collection('colisClient');
+    QuerySnapshot querySnapshot = await collectionReference
+        .where('tracking', isEqualTo:barcode)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      // Barcode not found in Firestore
+      print('Barcode not found.');
+    } else {
+      // Barcode found in Firestore
+      querySnapshot.docs.forEach((doc) {
+       Map<String,dynamic>? data = doc.data() as Map<String, dynamic>?;
+        if (kDebugMode) {
+          print('Data from Firestore: $data');
+        }
+
+      if(data != null) {
+        setState(() {
+          codeclientEditingController.text = data['codeClient'];
+          selectedtype = data['etat'] ;
+        });
+      }
+      });
+    }
   }
+
 
   void insert() async {
     if (_formKey.currentState!.validate()) {
@@ -332,22 +360,24 @@ class _State extends State<Add> {
     FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
 
     ColisModel colisModel = ColisModel();
+
     double poidstr = double.parse(poidsEditingController.text);
     double volumestr = double.parse(volumeEditingController.text);
-
+    int fraisdelivr = int.parse(fraisdelivraisonEditingController.text);
     calcul();
+    final colisref = firebaseFirestore.collection("colisDetails").doc();
     //writing all the value
-    //colisModel.colisid = colisModel.colisid;
+    colisModel.colisid = colisref.id;
     colisModel.codeClient = codeclientEditingController.text;
     colisModel.tracking = barcode;
     colisModel.poids = poidstr;
     colisModel.volume = volumestr;
-    colisModel.frais = fraisdelivraisonEditingController.text;
+    colisModel.frais = fraisdelivr;
     colisModel.modeEnvoie = selectedtype2;
     colisModel.etat = selectedtype;
     colisModel.facture = resultat;
 
-    await firebaseFirestore.collection("colisDetails").add(colisModel.toMap());
+    await colisref.set(colisModel.toMap());
     Fluttertoast.showToast(msg: "Le colis a été ajouté avec succés");
   }
 
@@ -360,33 +390,34 @@ class _State extends State<Add> {
     double resd = 0.0;
     var poids = double.parse(poidsEditingController.text);
     var volume = double.parse(volumeEditingController.text);
+    int fraisdelivr = int.parse(fraisdelivraisonEditingController.text);
     double prixexp = prixExpress.toDouble();
 
     if (selectedtype2 == "Express" && volume == 0) {
       resd = prixexp * poids;
-      resultat = resd.toInt();
+      resultat = resd.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }
     if (selectedtype2 == "Express" && volume < 0.006 && poids == 0) {
       resd = volume * prixexp;
       res2 = (resd / 0.006);
-      resultat = res2.toInt();
+      resultat = res2.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }
     if (selectedtype2 == "Express" && volume > 0.006 && poids == 0) {
       resd = volume * prixexp;
-      resultat = resd.toInt();
+      resultat = resd.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }
 
     if (selectedtype2 == "Maritimes" && poids == 0) {
       resd = volume * prixmaritime;
-      resultat = resd.toInt();
+      resultat = resd.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }
     if (selectedtype2 == "Batterie" && volume == 0) {
       resd = prixbatterie * poids;
-      resultat = resd.toInt();
+      resultat = resd.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }
     return resultat;

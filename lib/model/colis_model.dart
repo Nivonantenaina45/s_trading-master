@@ -6,12 +6,13 @@ class ColisModel {
   String? codeClient;
   double? poids;
   double? volume;
-  String? frais;
+  int? frais;
   String? modeEnvoie;
   String? etat;
   int? facture;
 
   ColisModel({
+    this.colisid,
     this.tracking,
     this.codeClient,
     this.poids,
@@ -23,6 +24,7 @@ class ColisModel {
   });
   factory ColisModel.fromMap(map) {
     return ColisModel(
+        colisid: map['colisid'],
         tracking: map['tracking'],
         codeClient: map['codeClient'],
         poids: map['poids'],
@@ -34,6 +36,7 @@ class ColisModel {
   }
   Map<String, dynamic> toMap() {
     return {
+      'colisid': colisid,
       'tracking': tracking,
       'codeClient': codeClient,
       'poids': poids,

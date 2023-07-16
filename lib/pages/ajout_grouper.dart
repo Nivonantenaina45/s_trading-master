@@ -77,7 +77,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Ajouter un groupement"),
+        title: const Text("Ajouter un groupement"),
         centerTitle: true,
       ),
       body: Center(
@@ -119,7 +119,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
               const SizedBox(height: 15),
               const Text(
                 "Identité du colis",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
@@ -139,7 +139,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      scanBarcodeCarton();
+                      scanBarcodeColis();
                     },
                     child: const Text("Scan"),
                   ),

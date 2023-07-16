@@ -19,6 +19,7 @@ dependencies:
   flutter_barcode_scanner: ^2.0.0
   font_awesome_flutter: ^10.4.0
   barcode_widget: ^2.0.4
+  connectivity: any
 
 
 dev_dependencies:

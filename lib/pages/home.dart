@@ -86,13 +86,13 @@ class _HomeState extends State<Home> {
                 mainAxisSpacing: 30,
                 children: [
                   itemDashboard(
-                      'Ajouter', CupertinoIcons.add_circled, Colors.teal,0),
-                  itemDashboard(
-                      'Generer', CupertinoIcons.square_on_circle, Colors.green,1),
-                  itemDashboard(
-                      'Infos colis', CupertinoIcons.question_circle, Colors.blue,2),
-                  itemDashboard(
-                      'Grouper', CupertinoIcons.circle_grid_3x3, Colors.brown,3),
+                      'Ajouter', CupertinoIcons.add_circled, Colors.teal, 0),
+                  itemDashboard('Generer', CupertinoIcons.square_on_circle,
+                      Colors.green, 1),
+                  itemDashboard('Infos colis', CupertinoIcons.question_circle,
+                      Colors.blue, 2),
+                  itemDashboard('Grouper', CupertinoIcons.circle_grid_3x3,
+                      Colors.brown, 3),
                 ],
               ),
             ),
@@ -127,17 +127,21 @@ class _HomeState extends State<Home> {
             ]),
         child: InkWell(
           onTap: () {
-            if(index==0){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>const Add()));
+            if (index == 0) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const Add()));
             }
-            if(index==1){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>const Generer()));
+            if (index == 1) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const Generer()));
             }
-            if(index==2){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>const Etats()));
+            if (index == 2) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const Etats()));
             }
-            if(index==3){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>const Grouper()));
+            if (index == 3) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const Grouper()));
             }
           },
           child: Column(
