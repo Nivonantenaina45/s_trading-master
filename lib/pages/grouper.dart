@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/colis_list.dart';
+import '../model/carton.dart';
 import '../model/colis_model.dart';
 import 'ajout_grouper.dart';
 import 'listes_colis_grouper.dart';
@@ -16,8 +17,10 @@ class Grouper extends StatefulWidget {
 }
 
 class _GrouperState extends State<Grouper> {
-  final _colisStream = FirebaseFirestore.instance.collection("colisGrouper");
+  final _colisStream = FirebaseFirestore.instance.collection("cartons");
+
   FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+
 
   String tracking = "";
   final codeclientEditingController = TextEditingController();
@@ -33,22 +36,45 @@ class _GrouperState extends State<Grouper> {
   var selectedtype;
   ColisModel colisrep = ColisModel();
   ColisCodebarre colisCodebarre = ColisCodebarre();
-  User? user = FirebaseAuth.instance.currentUser;
 
-  void initState() {
-    super.initState();
-    FirebaseFirestore.instance
-        .collection("colisDetails")
-        .doc(user!.uid)
-        .get()
-        .then((value) {
-      colisrep = ColisModel.fromMap(value.data());
-      setState(() {});
+  void _startListeningToCartons() {
+   _colisStream.snapshots().listen((snapshot) {
+      for (QueryDocumentSnapshot cartonDoc in snapshot.docs) {
+        String etat = cartonDoc.get('etat');
+        List<dynamic> colistracking = cartonDoc.get('trackingColis');
+        _updateColisDetailles(etat, colistracking);
+        Fluttertoast.showToast(msg: "L'état des petits colis a été modifié avec succès");
+      }
     });
+  }
+
+  Future<void> _updateColisDetailles(String etat, List<dynamic> colistracking) async {
+    for (var tracking in colistracking) {
+      QuerySnapshot colisSnapshot =
+      await FirebaseFirestore.instance.collection('colisDetails').where('tracking', isEqualTo: tracking).get();
+
+      for (QueryDocumentSnapshot colisDoc in colisSnapshot.docs) {
+        String docId = colisDoc.id;
+        await _updateDocument(docId, etat);
+      }
+    }
+  }
+
+  Future<void> _updateDocument(String docId, String etat) async {
+    try {
+      // Update the document with the required fields
+      await FirebaseFirestore.instance.collection('colisDetails').doc(docId).update({
+        'etat': etat,
+      });
+      print('Document $docId updated successfully.');
+    } catch (e) {
+      print('An error occurred while updating the document: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+
     Future<void> _update([DocumentSnapshot? documentSnapshot]) async {
       await showModalBottomSheet(
           isScrollControlled: true,
@@ -62,7 +88,7 @@ class _GrouperState extends State<Grouper> {
                   const SizedBox(
                     height: 15,
                   ),
-                  TextFormField(
+                  /*TextFormField(
                       enabled: false,
                       autofocus: false,
                       controller: trackingEditingController,
@@ -70,40 +96,27 @@ class _GrouperState extends State<Grouper> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                           prefixIcon:
-                              const Icon(Icons.confirmation_num_rounded),
+                          const Icon(Icons.confirmation_num_rounded),
                           contentPadding:
-                              const EdgeInsets.fromLTRB(15, 10, 15, 10),
+                          const EdgeInsets.fromLTRB(15, 10, 15, 10),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                          ))),
+                          ))),*/
                   const SizedBox(
                     height: 15,
                   ),
-                  TextFormField(
-                      enabled: false,
-                      autofocus: false,
-                      controller: trackingCartonEditingController,
-                      keyboardType: TextInputType.name,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.code),
-                          contentPadding:
-                              const EdgeInsets.fromLTRB(15, 10, 15, 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ))),
                   const SizedBox(
                     height: 15,
                   ),
                   DropdownButton(
                     items: _etat
                         .map((value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(
-                                value,
-                                style: const TextStyle(color: Colors.black54),
-                              ),
-                            ))
+                      value: value,
+                      child: Text(
+                        value,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    ))
                         .toList(),
                     onChanged: (selectedetat) {
                       if (kDebugMode) {
@@ -130,25 +143,16 @@ class _GrouperState extends State<Grouper> {
                     child: MaterialButton(
                       padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
                       //minWidth: MediaQuery.of(context).size.width,
-                      onPressed: () {
-                        colisCodebarre.etat = selectedtype;
-                        _colisStream
-                            .doc(documentSnapshot!.id)
-                            .update({'etat': selectedtype});
-                        Fluttertoast.showToast(
-                            msg: "L'etat du carton a été modifié avec succés");
-                        updateCollectionsIfConditionMet();
-                        /*if (colisCodebarre.tracking == colisModel.tracking) {
-                          final colisref1 =
-                              firebaseFirestore.collection("colisDetails");
-                          colisModel.etat = selectedtype;
-                          colisref1
-                              .doc(documentSnapshot!.id)
-                              .update({'etat': selectedtype});
-                          Fluttertoast.showToast(
-                              msg: "L'etat du petit colis a été modifié");
-                        }*/
-                        Navigator.pop(ctx);
+                      onPressed: (){
+
+                        String cartonId = documentSnapshot?.id ?? '';
+                        if (cartonId.isNotEmpty) {
+                           _colisStream.doc(cartonId).update({'etat': selectedtype});
+                          Fluttertoast.showToast(msg: "L'état du carton a été modifié avec succès");
+                           _startListeningToCartons();
+                           Navigator.pop(ctx);
+                        }
+
                       },
                       child: const Text(
                         "changer",
@@ -170,80 +174,34 @@ class _GrouperState extends State<Grouper> {
     return Scaffold(
       appBar: AppBar(
           title: Card(
-        child: TextField(
-          decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search), hintText: 'Recherche...'),
-          onChanged: (val) {
-            setState(() {
-              tracking = val;
-            });
-          },
-        ),
-      )),
+            child: TextField(
+              decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search), hintText: 'Recherche...'),
+              onChanged: (val) {
+                setState(() {
+                  tracking = val;
+                });
+              },
+            ),
+          )),
       body: StreamBuilder(
         stream: _colisStream.snapshots(),
         builder: (context, snapshot) {
-          var docs = snapshot.data!.docs;
 
+          List<QueryDocumentSnapshot> cartonDocs = snapshot.data!.docs;
           return (snapshot.connectionState == ConnectionState.waiting)
               ? const Center(
-                  child: CircularProgressIndicator(),
-                )
-
+            child: CircularProgressIndicator(),
+          )
               : ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final DocumentSnapshot documentSnapshot = docs[index];
-                    if (tracking.isEmpty) {
-                      return Card(
-                          child: ListTile(
-                              title: Text(
-                                docs[index]['trackingCarton'],
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                docs[index]['etat'],
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              trailing: IconButton(
-                                  onPressed: () {
-                                    _update(documentSnapshot);
-                                    trackingEditingController.text =
-                                        snapshot.data!.docs[index]['tracking'];
-                                    trackingCartonEditingController.text =
-                                        snapshot.data!.docs[index]
-                                            ['trackingCarton'];
-                                    selectedtype =
-                                        snapshot.data!.docs[index]['etat'];
-                                  },
-                                  icon: Icon(Icons.edit, color: Colors.blue)),
-                              onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              ListColis(doc: documentSnapshot),
-                                        ),
-                                      );
-
-                              }));
-                    }
-                    if (docs[index]['trackingCarton']
-                        .toString()
-                        .toLowerCase()
-                        .startsWith(tracking.toLowerCase())) {
-                      return Card(
-                        child: ListTile(
+              itemCount: cartonDocs.length,
+              itemBuilder: (context, index) {
+                 DocumentSnapshot documentSnapshot = cartonDocs[index];
+                if (tracking.isEmpty) {
+                  return Card(
+                      child: ListTile(
                           title: Text(
-                            docs[index]['trackingCarton'],
+                           '${cartonDocs[index]['tracking']}',
                             style: const TextStyle(
                               fontSize: 22,
                               color: Colors.grey,
@@ -251,18 +209,59 @@ class _GrouperState extends State<Grouper> {
                             ),
                           ),
                           subtitle: Text(
-                            docs[index]['etat'],
+                            '${cartonDocs[index]['etat']}',
                             style: const TextStyle(
                               fontSize: 18,
                               color: Colors.grey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          trailing: IconButton(
+                              onPressed: () {
+                                _update(documentSnapshot);
+                                /*trackingCartonEditingController.text =
+                                cartonDocs[index]['tracking'];*/
+                                selectedtype =
+                                '${cartonDocs[index]['etat']}';
+                              },
+                              icon: Icon(Icons.edit, color: Colors.blue)),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ListColis(doc: documentSnapshot),
+                              ),
+                            );
+                          }));
+                }
+                if (cartonDocs[index]['tracking']
+                    .toString()
+                    .toLowerCase()
+                    .startsWith(tracking.toLowerCase())) {
+                  return Card(
+                    child: ListTile(
+                      title: Text(
+                        cartonDocs[index]['tracking'],
+                        style: const TextStyle(
+                          fontSize: 22,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    }
-                    return Container();
-                  });
+                      ),
+                      subtitle: Text(
+                        cartonDocs[index]['etat'],
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Container();
+              });
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -274,31 +273,6 @@ class _GrouperState extends State<Grouper> {
       ),
     );
   }
-  void updateCollectionsIfConditionMet() async {
-    try {
-      // Get a Firestore instance
-      FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // Start a batch write
-      WriteBatch batch = firestore.batch();
 
-      // Step 1: Retrieve the data that matches the condition from both collections
-      QuerySnapshot collection1Snapshot =
-      await firestore.collection('colisDetails').where('tracking', isEqualTo: trackingEditingController.text).get();
-
-      // Step 2: Check if both documents are found
-      if (collection1Snapshot.docs.isNotEmpty ) {
-        // Step 3: Perform updates in both collections
-        batch.update(collection1Snapshot.docs[0].reference, {'etat': selectedtype});
-
-        // Step 4: Commit the batched write
-        await batch.commit();
-        print('Batch write successfully committed.');
-      } else {
-        print('Documents not found or condition not met. Batch write aborted.');
-      }
-    } catch (e) {
-      print('Error performing batch write: $e');
-    }
-  }
 }

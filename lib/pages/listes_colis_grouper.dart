@@ -16,7 +16,7 @@ class _ListColisState extends State<ListColis> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Détailles"),
+        title: const Text("Détailles"),
         centerTitle: true,
       ),
       body: Padding(
@@ -26,54 +26,54 @@ class _ListColisState extends State<ListColis> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              widget.doc['trackingCarton'],
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color:Colors.grey),
+              widget.doc['tracking'],
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color:Colors.grey),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(widget.doc['etat'],
-              style: TextStyle(fontSize: 18,color: Colors.grey),
+              style: const TextStyle(fontSize: 18,color: Colors.grey),
             ),
-            SizedBox(height: 16),
-           const  Text(
-              'Listes des petits colis:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,color:Colors.grey),
+            const SizedBox(height: 10),
+            const  Text("Listes des colis",
+              style: const TextStyle(fontSize: 24,color: Colors.grey),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('colisGrouper')
-                    .where('trackingCarton', isEqualTo: widget.doc['trackingCarton']) // Assuming 'itemId' is the field in 'related_info' collection that corresponds to 'title'
+                    .collection('cartons')
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(),
                     );
                   }
 
                   if (snapshot.hasError) {
-                    return Center(
+                    return const Center(
                       child: Text('Error fetching related information'),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(
+                    return const Center(
                       child: Text('No related information available'),
                     );
                   }
-
                   return ListView.builder(
                     itemCount: snapshot.data!.docs.length,
                     itemBuilder: (context, index) {
                       var doc = snapshot.data!.docs[index];
-                      String tracking = doc['tracking'];
-                      return Card(
-                        child: ListTile(
-                          title: Text(tracking, style: TextStyle(fontSize: 18,color: Colors.grey))
-                          // You can add more fields as needed
-                        ),
+                      List<dynamic> trackingColis = doc['trackingColis'];
+
+                        return Card(
+                        child:Column(
+                          children: [
+                            for (var tracking in trackingColis)
+                            Text(tracking, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,color: Colors.grey)),
+                          ],
+                        )
                       );
                     },
                   );

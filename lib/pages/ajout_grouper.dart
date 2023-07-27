@@ -6,6 +6,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/colis_list.dart';
 import 'package:s_trading/model/colis_model.dart';
 
+import '../model/carton.dart';
+
 class AjoutGrouper extends StatefulWidget {
   const AjoutGrouper({Key? key}) : super(key: key);
 
@@ -25,6 +27,13 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     'Retour en chine',
   ];
   var selectedtype;
+  List<String> listeScans = [];
+
+  void onScan(String resultatScan) {
+    setState(() {
+      listeScans.add(resultatScan);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +70,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
         //minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
-          postDetailsToFirestore();
+          ajouterCartonAvecScans();
         },
         child: const Text(
           "Sauvegarder",
@@ -140,6 +149,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
                   ElevatedButton(
                     onPressed: () {
                       scanBarcodeColis();
+                      onScan(barcodecolis);
                     },
                     child: const Text("Scan"),
                   ),
@@ -181,17 +191,35 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
 
     setState(() {
       this.barcodecolis = barcodecolis;
+
     });
   }
+  Future<void> ajouterCarton(Carton carton) async {
+    CollectionReference cartonCollection = FirebaseFirestore.instance.collection('cartons');
 
-  postDetailsToFirestore() async {
+    Map<String, dynamic> cartonData = carton.toJson();
+
+    await cartonCollection.add(cartonData);
+  }
+  void ajouterCartonAvecScans() {
+    // Créez un nouvel objet Carton avec les données du carton collectées auparavant
+    Carton nouveauCarton = Carton(
+        tracking: barcode,
+        etat: selectedtype,
+        trackingColis:listeScans);
+
+    // Appelez la fonction pour ajouter le carton à Firestore
+    ajouterCarton(nouveauCarton);
+    Fluttertoast.showToast(msg: "Les coli ont été ajouté dans le carton $barcode");
+  }
+
+/* postDetailsToFirestore() async {
     //calling our firestore
     //calling our user model
     //sending these values
     FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
 
     ColisCodebarre colisCodebarre = ColisCodebarre();
-    ColisModel colisModel = ColisModel();
 
     //writing all the value
     colisCodebarre.trackingCarton = barcode;
@@ -202,5 +230,5 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
         .collection("colisGrouper")
         .add(colisCodebarre.toMap());
     Fluttertoast.showToast(msg: "Le coli a été ajouté dans le carton $barcode");
-  }
+  }*/
 }

@@ -10,7 +10,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../model/colis_model.dart';
 
-
 class Add extends StatefulWidget {
   const Add({Key? key}) : super(key: key);
 
@@ -181,39 +180,17 @@ class _State extends State<Add> {
       color: Colors.blue,
       child: MaterialButton(
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-        //minWidth: MediaQuery.of(context).size.width,
+        minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
           insert();
+          barcode = 'Inconnue';
+          fraisdelivraisonEditingController.text = '';
+          codeclientEditingController.text = '';
+          poidsEditingController.text = '';
+          volumeEditingController.text = '';
         },
         child: const Text(
           "Inserer",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-    final raz = Material(
-      elevation: 5,
-      borderRadius: BorderRadius.circular(30),
-      color: Colors.blue,
-      child: MaterialButton(
-        padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-        //minWidth: MediaQuery.of(context).size.width,
-        onPressed: () {
-          setState(() {
-            barcode = 'Inconnue';
-            fraisdelivraisonEditingController.text = '';
-            codeclientEditingController.text = '';
-            poidsEditingController.text = '';
-            volumeEditingController.text = '';
-          });
-        },
-        child: const Text(
-          "Raz",
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 20,
@@ -290,14 +267,7 @@ class _State extends State<Add> {
                 ],
               ),
               const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  addButton,
-                  const SizedBox(width: 25.0),
-                  raz,
-                ],
-              ),
+              addButton,
             ],
           ),
         ),
@@ -317,35 +287,32 @@ class _State extends State<Add> {
 
     setState(() async {
       this.barcode = barcode;
-    });
+      CollectionReference collectionReference =
+          FirebaseFirestore.instance.collection('colisClient');
+      QuerySnapshot querySnapshot =
+          await collectionReference.where('tracking', isEqualTo: barcode).get();
 
-    CollectionReference collectionReference =
-    FirebaseFirestore.instance.collection('colisClient');
-    QuerySnapshot querySnapshot = await collectionReference
-        .where('tracking', isEqualTo:barcode)
-        .get();
+      if (querySnapshot.docs.isEmpty) {
+        // Barcode not found in Firestore
+        print('Barcode not found.');
+      } else {
+        // Barcode found in Firestore
+        querySnapshot.docs.forEach((doc) {
+          Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
+          if (kDebugMode) {
+            print('Data from Firestore: $data');
+          }
 
-    if (querySnapshot.docs.isEmpty) {
-      // Barcode not found in Firestore
-      print('Barcode not found.');
-    } else {
-      // Barcode found in Firestore
-      querySnapshot.docs.forEach((doc) {
-       Map<String,dynamic>? data = doc.data() as Map<String, dynamic>?;
-        if (kDebugMode) {
-          print('Data from Firestore: $data');
-        }
-
-      if(data != null) {
-        setState(() {
-          codeclientEditingController.text = data['codeClient'];
-          selectedtype = data['etat'] ;
+          if (data != null) {
+            setState(() {
+              codeclientEditingController.text = data['codeClient'];
+              selectedtype = data['etat'];
+            });
+          }
         });
       }
-      });
-    }
+    });
   }
-
 
   void insert() async {
     if (_formKey.currentState!.validate()) {
