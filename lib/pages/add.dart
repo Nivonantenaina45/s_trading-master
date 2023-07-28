@@ -225,7 +225,7 @@ class _State extends State<Add> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () async {
+                    onPressed: ()  {
                       scanBarcode();
                     },
                     child: const Text("Scan"),
@@ -285,33 +285,27 @@ class _State extends State<Add> {
 
     if (!mounted) return;
 
-    setState(() async {
+    setState(() {
       this.barcode = barcode;
-      CollectionReference collectionReference =
-          FirebaseFirestore.instance.collection('colisClient');
-      QuerySnapshot querySnapshot =
-          await collectionReference.where('tracking', isEqualTo: barcode).get();
-
-      if (querySnapshot.docs.isEmpty) {
-        // Barcode not found in Firestore
-        print('Barcode not found.');
-      } else {
-        // Barcode found in Firestore
-        querySnapshot.docs.forEach((doc) {
-          Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
-          if (kDebugMode) {
-            print('Data from Firestore: $data');
-          }
-
-          if (data != null) {
-            setState(() {
-              codeclientEditingController.text = data['codeClient'];
-              selectedtype = data['etat'];
-            });
-          }
-        });
-      }
     });
+    CollectionReference collectionReference =
+    FirebaseFirestore.instance.collection('colisClient');
+    QuerySnapshot querySnapshot =
+    await collectionReference.where('tracking', isEqualTo: barcode).get();
+
+    if (querySnapshot.docs.isEmpty) {
+      print('Barcode not found.');
+    } else {
+      // Barcode found in Firestore
+      var doc = querySnapshot.docs.first;
+      Map<String, dynamic> data = doc.data() as Map<String,dynamic>;
+      // Update the state with the retrieved data
+      setState(() {
+        codeclientEditingController.text = data['codeClient'];
+        Fluttertoast.showToast(msg: 'mode  envoie ${data['modeEnvoi']}');
+      });
+    }
+
   }
 
   void insert() async {
