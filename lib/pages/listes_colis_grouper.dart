@@ -42,6 +42,7 @@ class _ListColisState extends State<ListColis> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('cartons')
+                    .where('trackingColis', arrayContains: widget.doc['tracking'])
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
