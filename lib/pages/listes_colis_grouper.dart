@@ -42,7 +42,7 @@ class _ListColisState extends State<ListColis> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('cartons')
-                    .where('trackingColis', arrayContains: widget.doc['tracking'])
+                    .where('tracking', isEqualTo: widget.doc['tracking'])
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -62,16 +62,22 @@ class _ListColisState extends State<ListColis> {
                       child: Text('No related information available'),
                     );
                   }
-                  return ListView.builder(
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var doc = snapshot.data!.docs[index];
-                      List<dynamic> trackingColis = doc['trackingColis'];
 
+                  var cartonDocuments = snapshot.data!.docs;
+                  List<dynamic> allTrackingColis = [];
+
+                  for (var cartonDocument in cartonDocuments) {
+                    List<dynamic> trackingColis = cartonDocument['trackingColis'];
+                    allTrackingColis.addAll(trackingColis);
+                  }
+
+                  return ListView.builder(
+                    itemCount: allTrackingColis.length,
+                    itemBuilder: (context, index) {
+                      var tracking = allTrackingColis[index];
                         return Card(
                         child:Column(
                           children: [
-                            for (var tracking in trackingColis)
                             Text(tracking, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,color: Colors.grey)),
                           ],
                         )
