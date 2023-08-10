@@ -190,25 +190,25 @@ class _EtatsState extends State<Etats> {
                     padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
                     //minWidth: MediaQuery.of(context).size.width,
                     onPressed: () async {
-                      ColisModel colisModel = ColisModel();
+                     /* ColisModel colisModel = ColisModel();
                       double poidstr =
                           double.parse(poidsEditingController.text);
                       double volumestr =
                           double.parse(poidsEditingController.text);
                       int fraisdelivr =
-                          int.parse(fraisdelivraisonEditingController.text);
+                          int.parse(fraisdelivraisonEditingController.text);*/
 
                       //writing all the value
-                      colisModel.codeClient = codeclientEditingController.text;
+                      /*colisModel.codeClient = codeclientEditingController.text;
                       colisModel.tracking = trackingEditingController.text;
                       colisModel.etat = selectedtype;
                       colisModel.poids = poidstr;
                       colisModel.volume = volumestr;
                       colisModel.frais = fraisdelivr;
-                      colisModel.modeEnvoie = selectedtype2;
+                      colisModel.modeEnvoie = selectedtype2;*/
                       await _colisStream
                           .doc(documentSnapshot!.id)
-                          .update(colisModel.toMap());
+                          .update({'etat':selectedtype});
                       Fluttertoast.showToast(
                           msg: "L'etat du colis a été changé avec succés");
                       Navigator.pop(ctx);
@@ -324,35 +324,65 @@ class _EtatsState extends State<Etats> {
                         .toString()
                         .toLowerCase()
                         .startsWith(tracking.toLowerCase())) {
-                      return ListTile(
-                        title: Text(
-                          docs[index]['tracking'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.bold,
+                      return Card(
+                        child: ListTile(
+                          title:Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                              docs[index]['tracking'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                              IconButton(
+                                  onPressed: () {
+                                    _update(documentSnapshot);
+                                    codeclientEditingController.text =
+                                    snapshot.data!.docs[index]
+                                    ['codeClient'];
+                                    trackingEditingController.text = snapshot
+                                        .data!.docs[index]['tracking'];
+                                    poidsEditingController.text = snapshot
+                                        .data!.docs[index]['poids']
+                                        .toString();
+                                    volumeEditingController.text = snapshot
+                                        .data!.docs[index]['volume']
+                                        .toString();
+                                    fraisdelivraisonEditingController.text =
+                                        snapshot.data!.docs[index]['frais']
+                                            .toString();
+                                    selectedtype =
+                                    snapshot.data!.docs[index]['etat'];
+                                    selectedtype2 = snapshot.data?.docs[index]
+                                    ['modeEnvoie'];
+                                  },
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue))],
                           ),
-                        ),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              docs[index]['facture'].toString(),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
+                          subtitle: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text(
+                                docs[index]['facture'].toString(),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              docs[index]['etat'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
+                              Text(
+                                docs[index]['etat'],
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     }

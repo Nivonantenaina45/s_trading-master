@@ -22,7 +22,7 @@ class _State extends State<Splash> {
         connectivityResult == ConnectivityResult.wifi) {
     await Future.delayed(const Duration(milliseconds: 1500), () {});
     Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => Login()));
+        context, MaterialPageRoute(builder: (context) =>const Login()));
     }else
       {
       showDialog(

@@ -224,11 +224,12 @@ class _RegistrationState extends State<Registration> {
     if (_formKey.currentState!.validate()) {
       await _auth
           .createUserWithEmailAndPassword(email: email, password: password)
-          .then((value) => {
-                postDetailsToFirestore(),
-              })
+          .then((userCredential) async {
+        await userCredential.user!.sendEmailVerification();
+        postDetailsToFirestore();
+      })
           .catchError((e) {
-        Fluttertoast.showToast(msg: e!.message);
+        Fluttertoast.showToast(msg: e.toString());
       });
     }
   }
@@ -253,10 +254,11 @@ class _RegistrationState extends State<Registration> {
         .doc(user.uid)
         .set(userModel.toMap());
     Fluttertoast.showToast(msg: "Le compte a été créer avec succés");
+    Navigator.pop(context);
 
-    Navigator.pushAndRemoveUntil(
+    /*Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const Home()),
-        (route) => false);
+        (route) => false);*/
   }
 }

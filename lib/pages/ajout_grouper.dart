@@ -29,11 +29,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
   var selectedtype;
   List<String> listeScans = [];
 
-  void onScan(String resultatScan) {
-    setState(() {
-      listeScans.add(resultatScan);
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +145,6 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
                   ElevatedButton(
                     onPressed: () {
                       scanBarcodeColis();
-                      onScan(barcodecolis);
                     },
                     child: const Text("Scan"),
                   ),
@@ -188,11 +183,14 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     );
 
     if (!mounted) return;
+    if (barcodecolis != '-1') {
+      setState(() {
+        this.barcodecolis = barcodecolis;
+        listeScans.add(barcodecolis);
 
-    setState(() {
-      this.barcodecolis = barcodecolis;
+      });
 
-    });
+    }
   }
   Future<void> ajouterCarton(Carton carton) async {
     CollectionReference cartonCollection = FirebaseFirestore.instance.collection('cartons');
