@@ -2,8 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:flutter/services.dart';
 
-import '../model/colis_model.dart';
+import 'detaille_info_colis.dart';
+
 
 class Etats extends StatefulWidget {
   const Etats({Key? key}) : super(key: key);
@@ -17,6 +20,7 @@ class _EtatsState extends State<Etats> {
   String tracking = "";
   final codeclientEditingController = TextEditingController();
   final trackingEditingController = TextEditingController();
+  String barcode="";
 
   final List<String> _etat = <String>[
     'Arrivé en chine',
@@ -32,13 +36,37 @@ class _EtatsState extends State<Etats> {
 
   var selectedtype, selectedtype2;
 
+  Future<void> scanBarcode() async {
+     barcode = await FlutterBarcodeScanner.scanBarcode(
+      '#ff6666',
+      'Cancel',
+      true,
+      ScanMode.BARCODE,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      tracking = barcode;
+    });
+  }
+
+  Future<void> _deleteDocument(String documentId) async {
+    try {
+      await _colisStream.doc(documentId).delete();
+      Fluttertoast.showToast(msg: "Colis supprimé");
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Erreur de suppression du colis");
+    }
+  }
+
   Future<void> _update([DocumentSnapshot? documentSnapshot]) async {
     await showModalBottomSheet(
         isScrollControlled: true,
         context: context,
         builder: (BuildContext ctx) {
           return Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -188,29 +216,8 @@ class _EtatsState extends State<Etats> {
                   color: Colors.blue,
                   child: MaterialButton(
                     padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-                    //minWidth: MediaQuery.of(context).size.width,
                     onPressed: () async {
-                     /* ColisModel colisModel = ColisModel();
-                      double poidstr =
-                          double.parse(poidsEditingController.text);
-                      double volumestr =
-                          double.parse(poidsEditingController.text);
-                      int fraisdelivr =
-                          int.parse(fraisdelivraisonEditingController.text);*/
-
-                      //writing all the value
-                      /*colisModel.codeClient = codeclientEditingController.text;
-                      colisModel.tracking = trackingEditingController.text;
-                      colisModel.etat = selectedtype;
-                      colisModel.poids = poidstr;
-                      colisModel.volume = volumestr;
-                      colisModel.frais = fraisdelivr;
-                      colisModel.modeEnvoie = selectedtype2;*/
-                      await _colisStream
-                          .doc(documentSnapshot!.id)
-                          .update({'etat':selectedtype});
-                      Fluttertoast.showToast(
-                          msg: "L'etat du colis a été changé avec succés");
+                      await updateEtatAndDate(documentSnapshot!.id, selectedtype);
                       Navigator.pop(ctx);
                     },
                     child: const Text(
@@ -224,6 +231,8 @@ class _EtatsState extends State<Etats> {
                     ),
                   ),
                 ),
+
+
               ],
             ),
           );
@@ -235,14 +244,25 @@ class _EtatsState extends State<Etats> {
     return Scaffold(
       appBar: AppBar(
           title: Card(
-        child: TextField(
-          decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search), hintText: 'Recherche...'),
-          onChanged: (val) {
-            setState(() {
-              tracking = val;
-            });
-          },
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.search,color: Colors.blue,),
+              onPressed: scanBarcode, // Use the scanBarcode function here
+            ),
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Recherche...',
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    tracking = val;
+                  });
+                },
+              ),
+            ),
+          ],
         ),
       )),
       body: StreamBuilder(
@@ -257,7 +277,11 @@ class _EtatsState extends State<Etats> {
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final DocumentSnapshot documentSnapshot = docs[index];
-                    if (tracking.isEmpty) {
+                    if (tracking.isEmpty ||
+                        docs[index]['tracking']
+                            .toString()
+                            .toLowerCase()
+                            .startsWith(tracking.toLowerCase())) {
                       return Card(
                         child: ListTile(
                           title: Row(
@@ -294,21 +318,43 @@ class _EtatsState extends State<Etats> {
                                           ['modeEnvoie'];
                                     },
                                     icon: const Icon(Icons.edit,
-                                        color: Colors.blue))
+                                        color: Colors.blue)),
+                                IconButton(
+                                    icon: const Icon(Icons.delete,color: Colors.blue,),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            title: const Text("Confirmer la suppression "),
+                                            content: const Text(
+                                                "vous voulez vraiment supprimé ce colis?"),
+                                            actions: [
+                                              TextButton(
+                                                child: const Text("annuler"),
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                },
+                                              ),
+                                              TextButton(
+                                                child: const Text("Supprimer"),
+                                                onPressed: () {
+                                                  _deleteDocument(
+                                                      documentSnapshot.id);
+                                                  Navigator.of(context).pop();
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    })
                               ]),
                           subtitle: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
                               Text(
-                                docs[index]['facture'].toString(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                docs[index]['etat'],
+                                docs[index]['etat'] ?? 'etat non disponible',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   color: Colors.grey,
@@ -317,79 +363,49 @@ class _EtatsState extends State<Etats> {
                               ),
                             ],
                           ),
+                          onTap: () {
+                            if (documentSnapshot != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DetailsInfoColis(documentSnapshot: documentSnapshot),
+                                ),
+                              );
+                            }
+                          },
                         ),
                       );
                     }
-                    if (docs[index]['tracking']
-                        .toString()
-                        .toLowerCase()
-                        .startsWith(tracking.toLowerCase())) {
-                      return Card(
-                        child: ListTile(
-                          title:Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                              docs[index]['tracking'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                              IconButton(
-                                  onPressed: () {
-                                    _update(documentSnapshot);
-                                    codeclientEditingController.text =
-                                    snapshot.data!.docs[index]
-                                    ['codeClient'];
-                                    trackingEditingController.text = snapshot
-                                        .data!.docs[index]['tracking'];
-                                    poidsEditingController.text = snapshot
-                                        .data!.docs[index]['poids']
-                                        .toString();
-                                    volumeEditingController.text = snapshot
-                                        .data!.docs[index]['volume']
-                                        .toString();
-                                    fraisdelivraisonEditingController.text =
-                                        snapshot.data!.docs[index]['frais']
-                                            .toString();
-                                    selectedtype =
-                                    snapshot.data!.docs[index]['etat'];
-                                    selectedtype2 = snapshot.data?.docs[index]
-                                    ['modeEnvoie'];
-                                  },
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.blue))],
-                          ),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text(
-                                docs[index]['facture'].toString(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                docs[index]['etat'],
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return Container();
+                    return const SizedBox.shrink();
                   });
         },
       ),
     );
+  }
+  Future<void> updateEtatAndDate(String documentId, String etat) async {
+    try {
+      DateTime currentDate = DateTime.now();
+
+      // Mettez à jour le document du colis
+      await FirebaseFirestore.instance.collection('colisDetails').doc(documentId).update({
+        'etat': etat,
+      });
+
+      // Ajoutez la date au champ correspondant dans Firestore
+      String fieldName = 'dateEtat_${etat.replaceAll(' ', '_').toLowerCase()}';
+      await FirebaseFirestore.instance.collection('colisDetails').doc(documentId).collection('dates').add({
+        'dateEtat': Timestamp.fromDate(currentDate),
+        'etat': etat,
+      });
+
+      Fluttertoast.showToast(
+        msg: "L'etat du colis a été changé avec succès",
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Erreur lors de la mise à jour de l'état du colis",
+      );
+      print('An error occurred while updating the document: $e');
+    }
   }
 }

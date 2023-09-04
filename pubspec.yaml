@@ -21,6 +21,8 @@ dependencies:
   barcode_widget: ^2.0.4
   connectivity: any
   uuid: ^3.0.7
+  intl: any
+
 
 
 dev_dependencies:

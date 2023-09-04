@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/colis_list.dart';
 import '../model/carton.dart';
@@ -34,6 +35,7 @@ class _GrouperState extends State<Grouper> {
     'Retour en chine',
   ];
   var selectedtype;
+  String barcode="";
   ColisModel colisrep = ColisModel();
   ColisCodebarre colisCodebarre = ColisCodebarre();
 
@@ -45,6 +47,20 @@ class _GrouperState extends State<Grouper> {
         _updateColisDetailles(etat, colistracking);
         Fluttertoast.showToast(msg: "L'état des petits colis a été modifié avec succès");
       }
+    });
+  }
+  Future<void> scanBarcode() async {
+    barcode = await FlutterBarcodeScanner.scanBarcode(
+      '#ff6666',
+      'Cancel',
+      true,
+      ScanMode.BARCODE,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      tracking = barcode;
     });
   }
 
@@ -62,8 +78,19 @@ class _GrouperState extends State<Grouper> {
 
   Future<void> _updateDocument(String docId, String etat) async {
     try {
-      // Update the document with the required fields
-      await FirebaseFirestore.instance.collection('colisDetails').doc(docId).update({
+      DateTime currentDate = DateTime.now();
+      await FirebaseFirestore.instance
+          .collection('colisDetails')
+          .doc(docId)
+          .collection('dates')
+          .add({
+        'dateEtat': Timestamp.fromDate(currentDate),
+        'etat': etat,
+      });
+      await FirebaseFirestore.instance
+          .collection('colisDetails')
+          .doc(docId)
+          .update({
         'etat': etat,
       });
       print('Document $docId updated successfully.');
@@ -75,13 +102,23 @@ class _GrouperState extends State<Grouper> {
   @override
   Widget build(BuildContext context) {
 
+    Future<void> _deleteCarton(String cartonId) async {
+      try {
+        await _colisStream.doc(cartonId).delete();
+        Fluttertoast.showToast(msg: "Carton supprimé avec ses colis membres");
+      } catch (e) {
+        Fluttertoast.showToast(msg: "Erreur de suppression");
+      }
+    }
+
+
     Future<void> _update([DocumentSnapshot? documentSnapshot]) async {
       await showModalBottomSheet(
           isScrollControlled: true,
           context: context,
           builder: (BuildContext ctx) {
             return Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -143,16 +180,11 @@ class _GrouperState extends State<Grouper> {
                     child: MaterialButton(
                       padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
                       //minWidth: MediaQuery.of(context).size.width,
-                      onPressed: (){
-
-                        String cartonId = documentSnapshot?.id ?? '';
-                        if (cartonId.isNotEmpty) {
-                           _colisStream.doc(cartonId).update({'etat': selectedtype});
-                          Fluttertoast.showToast(msg: "L'état du carton a été modifié avec succès");
-                           _startListeningToCartons();
+                      onPressed: ()async{
+                            String cartonId = documentSnapshot?.id ?? '';
+                            await updateEtatAndDate(cartonId, selectedtype);
+                            _startListeningToCartons();
                            Navigator.pop(ctx);
-                        }
-
                       },
                       child: const Text(
                         "changer",
@@ -174,14 +206,25 @@ class _GrouperState extends State<Grouper> {
     return Scaffold(
       appBar: AppBar(
           title: Card(
-            child: TextField(
-              decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search), hintText: 'Recherche...'),
-              onChanged: (val) {
-                setState(() {
-                  tracking = val;
-                });
-              },
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.search,color: Colors.blue,),
+                  onPressed: scanBarcode, // Use the scanBarcode function here
+                ),
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Recherche...',
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        tracking = val;
+                      });
+                    },
+                  ),
+                ),
+              ],
             ),
           )),
       body: StreamBuilder(
@@ -197,17 +240,64 @@ class _GrouperState extends State<Grouper> {
               itemCount: cartonDocs.length,
               itemBuilder: (context, index) {
                  DocumentSnapshot documentSnapshot = cartonDocs[index];
-                if (tracking.isEmpty) {
+                if (tracking.isEmpty || cartonDocs[index]['tracking']
+                    .toString()
+                    .toLowerCase()
+                    .startsWith(tracking.toLowerCase())) {
                   return Card(
                       child: ListTile(
-                          title: Text(
-                           '${cartonDocs[index]['tracking']}',
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                          Text(
+                          '${cartonDocs[index]['tracking']}',
                             style: const TextStyle(
                               fontSize: 22,
                               color: Colors.grey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                              IconButton(
+                                  onPressed: () {
+                                    _update(documentSnapshot);
+                                    /*trackingCartonEditingController.text =
+                                cartonDocs[index]['tracking'];*/
+                                    selectedtype =
+                                    '${cartonDocs[index]['etat']}';
+                                  },
+                                  icon: const Icon(Icons.edit, color: Colors.blue)),
+                              IconButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text("Confirmer la suppression"),
+                                        content: const Text("Êtes-vous sûr de vouloir supprimer ce carton?"),
+                                        actions: [
+                                          TextButton(
+                                            child: const Text("Annuler"),
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                          TextButton(
+                                            child: const Text("Supprimer"),
+                                            onPressed: () {
+                                              _deleteCarton(documentSnapshot.id);
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                icon: const Icon(Icons.delete, color: Colors.blue),
+                              ),
+                        ]
+                      ),
+
                           subtitle: Text(
                             '${cartonDocs[index]['etat']}',
                             style: const TextStyle(
@@ -216,15 +306,7 @@ class _GrouperState extends State<Grouper> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          trailing: IconButton(
-                              onPressed: () {
-                                _update(documentSnapshot);
-                                /*trackingCartonEditingController.text =
-                                cartonDocs[index]['tracking'];*/
-                                selectedtype =
-                                '${cartonDocs[index]['etat']}';
-                              },
-                              icon: Icon(Icons.edit, color: Colors.blue)),
+
                           onTap: () {
                             Navigator.push(
                               context,
@@ -233,34 +315,11 @@ class _GrouperState extends State<Grouper> {
                                     ListColis(doc: documentSnapshot),
                               ),
                             );
-                          }));
-                }
-                if (cartonDocs[index]['tracking']
-                    .toString()
-                    .toLowerCase()
-                    .startsWith(tracking.toLowerCase())) {
-                  return Card(
-                    child: ListTile(
-                      title: Text(
-                        cartonDocs[index]['tracking'],
-                        style: const TextStyle(
-                          fontSize: 22,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        cartonDocs[index]['etat'],
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                          }
+                          )
                   );
                 }
-                return Container();
+                 return const SizedBox.shrink();
               });
         },
       ),
@@ -273,6 +332,37 @@ class _GrouperState extends State<Grouper> {
       ),
     );
   }
+  Future<void> updateEtatAndDate(String cartonId, String etat) async {
+    try {
+      DateTime currentDate = DateTime.now();
 
+      // Mettez à jour le document du carton
+      await FirebaseFirestore.instance.collection('cartons').doc(cartonId).update({
+        'etat': etat,
+      });
 
+      // Obtenez les colis membres du carton
+      DocumentSnapshot cartonSnapshot = await FirebaseFirestore.instance.collection('cartons').doc(cartonId).get();
+      List<dynamic> colistracking = cartonSnapshot.get('trackingColis');
+
+      // Mettez à jour les colis membres du carton
+      for (var tracking in colistracking) {
+        QuerySnapshot colisSnapshot = await FirebaseFirestore.instance.collection('colisDetails').where('tracking', isEqualTo: tracking).get();
+
+        for (QueryDocumentSnapshot colisDoc in colisSnapshot.docs) {
+          String docId = colisDoc.id;
+          await _updateDocument(docId, etat);
+        }
+      }
+
+      Fluttertoast.showToast(
+        msg: "L'état du carton a été modifié avec succès",
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Erreur lors de la mise à jour de l'état du carton et de ses colis membres",
+      );
+      print('An error occurred while updating the carton and colis: $e');
+    }
+  }
 }

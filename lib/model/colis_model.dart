@@ -10,6 +10,7 @@ class ColisModel {
   String? modeEnvoie;
   String? etat;
   int? facture;
+  DateTime? dateSaisie;
 
   ColisModel({
     this.colisid,
@@ -21,6 +22,7 @@ class ColisModel {
     this.modeEnvoie,
     this.etat,
     this.facture,
+    this.dateSaisie,
   });
   factory ColisModel.fromMap(map) {
     return ColisModel(
@@ -33,6 +35,9 @@ class ColisModel {
         modeEnvoie: map['modeEnvoie'],
         etat: map['etat'],
         facture: map['facture']);
+
+
+
   }
   Map<String, dynamic> toMap() {
     return {
@@ -45,6 +50,7 @@ class ColisModel {
       'modeEnvoie': modeEnvoie,
       'etat': etat,
       'facture': facture,
+      'dateSaisie':dateSaisie,
     };
   }
 }

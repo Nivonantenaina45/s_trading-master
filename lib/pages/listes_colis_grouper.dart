@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../model/colis_list.dart';
 
@@ -78,7 +79,19 @@ class _ListColisState extends State<ListColis> {
                         return Card(
                         child:Column(
                           children: [
-                            Text(tracking, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,color: Colors.grey)),
+                            Row(
+                              children: [
+                                Text(tracking, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold,color: Colors.grey)),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,color:Colors.blue),
+                                  onPressed: () {
+                                    // Ajoutez ici la logique de suppression pour le colis "tracking"
+                                    _deleteColis(tracking);
+                                  },
+                                ),
+                              ],
+                            )
+
                           ],
                         )
                       );
@@ -92,5 +105,47 @@ class _ListColisState extends State<ListColis> {
       ),
     );
   }
+  void _deleteColis(String tracking) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirmer la suppression"),
+          content: const Text("Êtes-vous sûr de vouloir supprimer ce colis ?"),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text("Annuler"),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('cartons')
+                      .where('tracking', isEqualTo: widget.doc['tracking'])
+                      .get()
+                      .then((querySnapshot) {
+                    querySnapshot.docs.forEach((doc) async {
+                      List<dynamic> trackingColis = doc['trackingColis'];
+                      trackingColis.remove(tracking);
+                      await doc.reference.update({'trackingColis': trackingColis});
+                    });
+                  });
+                  Fluttertoast.showToast(msg:"Colis supprimé avec succès");
+                } catch (error) {
+                  Fluttertoast.showToast(msg:"Erreur lors de la suppression du colis");
+                }
+              },
+              child: const Text("Supprimer"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 }
 
