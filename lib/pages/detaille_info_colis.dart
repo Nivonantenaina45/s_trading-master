@@ -90,37 +90,51 @@ class _DetailsInfoColisState extends State<DetailsInfoColis> {
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Text('Aucune date d\'état disponible.',style:TextStyle(color: Colors.grey,fontWeight: FontWeight.bold),);
+                  return const Text(
+                    'Aucune date d\'état disponible.',
+                    style: TextStyle(
+                        color: Colors.grey, fontWeight: FontWeight.bold),
+                  );
                 }
 
                 final dateEtatList = snapshot.data!.docs;
+                final Map<String, Timestamp> latestDateByState = {};
+
+                // Parcourez la liste triée et stockez la dernière date pour chaque état
+                for (var dateDoc in dateEtatList) {
+                  final String etat = dateDoc['etat'];
+                  if (!latestDateByState.containsKey(etat)) {
+                    latestDateByState[etat] = dateDoc['dateEtat'];
+                  }
+                }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                   const Text(
+                    const Text(
                       'Dates d\'état:',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey
-                      ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey),
                     ),
-                    for (var dateDoc in dateEtatList)
+                    for (var etat in latestDateByState.keys)
                       Card(
                         child: ListTile(
                           title: Text(
-                            formatDateTime(dateDoc['dateEtat']),
-                            style: const TextStyle(fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey
+                            formatDateTime(latestDateByState[etat]!),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
                             ),
                           ),
                           subtitle: Text(
-                            dateDoc['etat'],
-                            style: const TextStyle(fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey
+                            etat,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
                             ),
                           ),
                         ),

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import 'detaille_info_colis.dart';
-
 
 class Etats extends StatefulWidget {
   const Etats({Key? key}) : super(key: key);
@@ -16,11 +16,11 @@ class Etats extends StatefulWidget {
 }
 
 class _EtatsState extends State<Etats> {
-  final _colisStream = FirebaseFirestore.instance.collection("colisDetails");
+  late var _colisStream = FirebaseFirestore.instance.collection("colisDetails");
   String tracking = "";
   final codeclientEditingController = TextEditingController();
   final trackingEditingController = TextEditingController();
-  String barcode="";
+  String barcode = "";
 
   final List<String> _etat = <String>[
     'Arrivé en chine',
@@ -36,8 +36,20 @@ class _EtatsState extends State<Etats> {
 
   var selectedtype, selectedtype2;
 
+  final codeClientFilterController = TextEditingController();
+  final dateDebutFilterController = TextEditingController();
+  final dateFinFilterController = TextEditingController();
+
+  Stream<QuerySnapshot> _filteredColisStream =
+      FirebaseFirestore.instance.collection("colisDetails").snapshots();
+  bool isFiltering = false;
+
+  String weightUnit = 'kg';
+  String volumeUnit = 'm³';
+  List<DocumentSnapshot> docs = [];
+
   Future<void> scanBarcode() async {
-     barcode = await FlutterBarcodeScanner.scanBarcode(
+    barcode = await FlutterBarcodeScanner.scanBarcode(
       '#ff6666',
       'Cancel',
       true,
@@ -49,6 +61,7 @@ class _EtatsState extends State<Etats> {
     setState(() {
       tracking = barcode;
     });
+    filterData();
   }
 
   Future<void> _deleteDocument(String documentId) async {
@@ -61,6 +74,11 @@ class _EtatsState extends State<Etats> {
   }
 
   Future<void> _update([DocumentSnapshot? documentSnapshot]) async {
+    if (documentSnapshot == null || !documentSnapshot.exists) {
+      // Si le documentSnapshot est nul ou n'existe pas, ne faites rien.
+      return;
+    }
+
     await showModalBottomSheet(
         isScrollControlled: true,
         context: context,
@@ -217,7 +235,8 @@ class _EtatsState extends State<Etats> {
                   child: MaterialButton(
                     padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
                     onPressed: () async {
-                      await updateEtatAndDate(documentSnapshot!.id, selectedtype);
+                      await updateEtatAndDate(
+                          documentSnapshot!.id, selectedtype);
                       Navigator.pop(ctx);
                     },
                     child: const Text(
@@ -231,8 +250,6 @@ class _EtatsState extends State<Etats> {
                     ),
                   ),
                 ),
-
-
               ],
             ),
           );
@@ -247,7 +264,16 @@ class _EtatsState extends State<Etats> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.search,color: Colors.blue,),
+              icon: Icon(Icons.filter_list, color: Colors.blue[400]),
+              onPressed: () {
+                showFilterDialog();
+              },
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.search,
+                color: Colors.blue,
+              ),
               onPressed: scanBarcode, // Use the scanBarcode function here
             ),
             Expanded(
@@ -266,9 +292,9 @@ class _EtatsState extends State<Etats> {
         ),
       )),
       body: StreamBuilder(
-        stream: _colisStream.snapshots(),
+        stream: isFiltering ? _filteredColisStream : _colisStream.snapshots(),
         builder: (context, snapshot) {
-          var docs = snapshot.data!.docs;
+          docs = snapshot.data?.docs ?? [];
           return (snapshot.connectionState == ConnectionState.waiting)
               ? const Center(
                   child: CircularProgressIndicator(),
@@ -320,15 +346,19 @@ class _EtatsState extends State<Etats> {
                                     icon: const Icon(Icons.edit,
                                         color: Colors.blue)),
                                 IconButton(
-                                    icon: const Icon(Icons.delete,color: Colors.blue,),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.blue,
+                                    ),
                                     onPressed: () {
                                       showDialog(
                                         context: context,
                                         builder: (BuildContext context) {
                                           return AlertDialog(
-                                            title: const Text("Confirmer la suppression "),
+                                            title: const Text(
+                                                "Confirmer la suppression ",style:TextStyle(color: Colors.blue)),
                                             content: const Text(
-                                                "vous voulez vraiment supprimé ce colis?"),
+                                                "vous voulez vraiment supprimé ce colis?",style:TextStyle(color: Colors.grey)),
                                             actions: [
                                               TextButton(
                                                 child: const Text("annuler"),
@@ -368,7 +398,8 @@ class _EtatsState extends State<Etats> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => DetailsInfoColis(documentSnapshot: documentSnapshot),
+                                  builder: (context) => DetailsInfoColis(
+                                      documentSnapshot: documentSnapshot),
                                 ),
                               );
                             }
@@ -382,18 +413,26 @@ class _EtatsState extends State<Etats> {
       ),
     );
   }
+
   Future<void> updateEtatAndDate(String documentId, String etat) async {
     try {
       DateTime currentDate = DateTime.now();
 
       // Mettez à jour le document du colis
-      await FirebaseFirestore.instance.collection('colisDetails').doc(documentId).update({
+      await FirebaseFirestore.instance
+          .collection('colisDetails')
+          .doc(documentId)
+          .update({
         'etat': etat,
       });
 
       // Ajoutez la date au champ correspondant dans Firestore
       String fieldName = 'dateEtat_${etat.replaceAll(' ', '_').toLowerCase()}';
-      await FirebaseFirestore.instance.collection('colisDetails').doc(documentId).collection('dates').add({
+      await FirebaseFirestore.instance
+          .collection('colisDetails')
+          .doc(documentId)
+          .collection('dates')
+          .add({
         'dateEtat': Timestamp.fromDate(currentDate),
         'etat': etat,
       });
@@ -407,5 +446,112 @@ class _EtatsState extends State<Etats> {
       );
       print('An error occurred while updating the document: $e');
     }
+  }
+
+  void showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Filtres',
+            style: TextStyle(color: Colors.blue),
+          ), // Titre du dialogue
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Ajoutez ici vos champs de filtre TextField
+                TextField(
+                  controller: codeClientFilterController,
+                  decoration: InputDecoration(
+                    labelText: 'Code client',
+                  ),
+                ),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Mode d\'envoi',
+                  ),
+                  value: selectedtype2,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedtype2 = value;
+                    });
+                  },
+                  items: _modeenvoie.map((value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Etat',
+                  ),
+                  value: selectedtype,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedtype = value;
+                    });
+                  },
+                  items: _etat.map((value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Filtrer'), // Bouton de filtrage
+              onPressed: () {
+                toggleFiltering();
+                Navigator.of(context).pop(); // Ferme le dialogue
+                filterData(); // Appliquez les filtres
+              },
+            ),
+            TextButton(
+              child: Text('Annuler'), // Bouton d'annulation
+              onPressed: () {
+                Navigator.of(context).pop(); // Ferme le dialogue
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void filterData() {
+    Query filteredQuery = FirebaseFirestore.instance.collection("colisDetails");
+
+    if (codeClientFilterController.text.isNotEmpty) {
+      filteredQuery = filteredQuery.where('codeClient',
+          isEqualTo: codeClientFilterController.text);
+    }
+
+    if (selectedtype2 != null) {
+      filteredQuery =
+          filteredQuery.where('modeEnvoie', isEqualTo: selectedtype2);
+    }
+
+    if (selectedtype != null) {
+      filteredQuery = filteredQuery.where('etat', isEqualTo: selectedtype);
+    }
+
+    setState(() {
+      _filteredColisStream = filteredQuery.snapshots();
+      isFiltering = true;
+    });
+  }
+
+  void toggleFiltering() {
+    setState(() {
+      isFiltering = !isFiltering;
+    });
   }
 }

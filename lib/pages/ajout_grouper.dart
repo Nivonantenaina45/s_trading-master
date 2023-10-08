@@ -21,10 +21,10 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
   final codeclientEditingController = TextEditingController();
   final List<String> _etat = <String>[
     'Arrivé en chine',
-    'En cours envoie',
-    'Arrivé à Mada',
-    'Récuperer',
-    'Retour en chine',
+    'en cours envoie',
+    'arrivé à Mada',
+    'récuperer',
+    'retour en chine',
   ];
   var selectedtype;
   List<String> listeScans = [];
@@ -183,15 +183,41 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     );
 
     if (!mounted) return;
+
     if (barcodecolis != '-1') {
-      setState(() {
-        this.barcodecolis = barcodecolis;
-        listeScans.add(barcodecolis);
+      bool validerColis = await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Validation colis",style:TextStyle(color: Colors.blue),),
+            content: Text("Voulez-vous ajouter $barcodecolis?",style:TextStyle(color: Colors.grey),),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false); // Annuler la validation
+                },
+                child: const Text("Annuler"),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true); // Valider la validation
+                },
+                child: const Text("Valider"),
+              ),
+            ],
+          );
+        },
+      );
 
-      });
-
+      if (validerColis == true) {
+        setState(() {
+          this.barcodecolis = barcodecolis;
+          listeScans.add(barcodecolis);
+        });
+      }
     }
   }
+
   Future<void> ajouterCarton(Carton carton) async {
     CollectionReference cartonCollection = FirebaseFirestore.instance.collection('cartons');
 
@@ -208,7 +234,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
 
     // Appelez la fonction pour ajouter le carton à Firestore
     ajouterCarton(nouveauCarton);
-    Fluttertoast.showToast(msg: "Les coli ont été ajouté dans le carton $barcode");
+    Fluttertoast.showToast(msg: "Les colis ont été ajouté dans le carton $barcode");
   }
 
 /* postDetailsToFirestore() async {
