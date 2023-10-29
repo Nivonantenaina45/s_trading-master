@@ -25,6 +25,8 @@ class _State extends State<Add> {
   final volumeEditingController = TextEditingController();
   final fraisdelivraisonEditingController = TextEditingController();
   var selectedtype, selectedtype2;
+  bool isDropdownSelected = false;
+
 
   int resultat = 0;
 
@@ -139,6 +141,7 @@ class _State extends State<Add> {
         }
         setState(() {
           selectedtype2 = selectedmodeenvoi;
+          isDropdownSelected = true;
         });
       },
       value: selectedtype2,
@@ -164,6 +167,7 @@ class _State extends State<Add> {
         }
         setState(() {
           selectedtype = selectedetat;
+          isDropdownSelected = true;
         });
       },
       value: selectedtype,
@@ -310,15 +314,26 @@ class _State extends State<Add> {
 
   void insert() async {
     if (_formKey.currentState!.validate()) {
-      postDetailsToFirestore();
+      if (isDropdownSelected) {  // Vérification de la sélection du menu déroulant
+        postDetailsToFirestore();
+      } else {
+        Fluttertoast.showToast(msg: "Veuillez sélectionner un mode envoie ou état");
+      }
     }
   }
 
   postDetailsToFirestore() async {
-    //calling our firestore
-    //calling our user model
-    //sending these values
     FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
+
+    /*QuerySnapshot querySnapshot = await firebaseFirestore
+        .collection("colisDetails")
+        .where('tracking', isEqualTo: barcode)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      Fluttertoast.showToast(msg: "Ce tracking est déjà ajouté!!.");
+      return; // Arrêter l'ajout si un doublon est trouvé
+    }*/
 
     ColisModel colisModel = ColisModel();
 
@@ -337,6 +352,8 @@ class _State extends State<Add> {
     colisModel.modeEnvoie = selectedtype2;
     colisModel.etat = selectedtype;
     colisModel.facture = resultat;
+    colisModel.dateSaisie = DateTime.now();
+
 
     await colisref.set(colisModel.toMap());
     Fluttertoast.showToast(msg: "Le colis a été ajouté avec succés");

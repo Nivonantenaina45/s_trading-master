@@ -21,6 +21,9 @@ dependencies:
   barcode_widget: ^2.0.4
   connectivity: any
   uuid: ^3.0.7
+  intl: any
+  flutter_local_notifications: ^16.1.0
+
 
 
 dev_dependencies:
