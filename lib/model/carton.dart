@@ -1,12 +1,15 @@
 class Carton {
-  late final String tracking;
+  late final String trackingCarton;
   late final String etat;
   late final List<String> trackingColis;
 
-  Carton({required this.tracking, required this.etat, required this.trackingColis});
+  Carton(
+      {required this.trackingCarton,
+      required this.etat,
+      required this.trackingColis});
   factory Carton.fromJson(Map<String, dynamic> json) {
     return Carton(
-      tracking: json['tracking'],
+      trackingCarton: json['trackingCarton'],
       etat: json['etat'],
       trackingColis: List<String>.from(json['trackingColis']),
     );
@@ -14,7 +17,7 @@ class Carton {
 
   Map<String, dynamic> toJson() {
     return {
-      'tracking': tracking,
+      'trackingCarton': trackingCarton,
       'etat': etat,
       'trackingColis': trackingColis,
     };

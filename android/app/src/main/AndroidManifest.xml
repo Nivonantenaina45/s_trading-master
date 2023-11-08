@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.sahcreator.s_trading">
-   <application
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
         android:label="s_trading Agent"
         android:name="${applicationName}"
         android:icon="@mipmap/s_trade">

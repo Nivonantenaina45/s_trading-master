@@ -1,12 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+
+//import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/colis_list.dart';
 import 'package:s_trading/model/colis_model.dart';
-
 import '../model/carton.dart';
+import 'package:http/http.dart' as http;
 
 class AjoutGrouper extends StatefulWidget {
   const AjoutGrouper({Key? key}) : super(key: key);
@@ -28,8 +30,6 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
   ];
   var selectedtype;
   List<String> listeScans = [];
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +66,8 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
         //minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
-          ajouterCartonAvecScans();
+          //ajouterCartonAvecScans();
+          ajouterCarton();
         },
         child: const Text(
           "Sauvegarder",
@@ -189,8 +190,14 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text("Validation colis",style:TextStyle(color: Colors.blue),),
-            content: Text("Voulez-vous ajouter $barcodecolis?",style:TextStyle(color: Colors.grey),),
+            title: const Text(
+              "Validation colis",
+              style: TextStyle(color: Colors.blue),
+            ),
+            content: Text(
+              "Voulez-vous ajouter $barcodecolis?",
+              style: TextStyle(color: Colors.grey),
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -218,7 +225,52 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     }
   }
 
-  Future<void> ajouterCarton(Carton carton) async {
+  Future<void> ajouterCarton() async {
+    if (barcode.isEmpty || selectedtype == null || listeScans.isEmpty) {
+      Fluttertoast.showToast(
+          msg:
+              'Veuillez scanner un code-barres, sélectionner un état et ajouter des données de suivi.');
+      return;
+    }
+
+    Map<String, dynamic> cartonData = {
+      "trackingCarton": barcode,
+      "etat": selectedtype,
+      "trackingColis": listeScans,
+    };
+
+    final apiUrl = 'https://s-tradingmadagasikara.com/addCarton.php';
+
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      body: jsonEncode(cartonData),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 201) {
+      // Carton ajouté avec succès
+      print('Response Body: ${response.body}');
+      Fluttertoast.showToast(msg: 'Carton ajouté avec succès');
+
+      setState(() {
+        barcode = '';
+        selectedtype = null;
+        listeScans.clear();
+      });
+    } else if (response.statusCode == 400) {
+      // Mauvaise requête
+      print('HTTP Error: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      Fluttertoast.showToast(msg: 'Données incomplètes fournies');
+    } else {
+      // Erreur interne du serveur ou autre
+      print('HTTP Error: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      Fluttertoast.showToast(msg: '${response.body}');
+    }
+  }
+
+  /* Future<void> ajouterCarton(Carton carton) async {
     CollectionReference cartonCollection = FirebaseFirestore.instance.collection('cartons');
 
     Map<String, dynamic> cartonData = carton.toJson();
@@ -235,7 +287,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     // Appelez la fonction pour ajouter le carton à Firestore
     ajouterCarton(nouveauCarton);
     Fluttertoast.showToast(msg: "Les colis ont été ajouté dans le carton $barcode");
-  }
+  }*/
 
 /* postDetailsToFirestore() async {
     //calling our firestore

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:ffi';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:cloud_firestore/cloud_firestore.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
@@ -27,13 +29,12 @@ class _State extends State<Add> {
   var selectedtype, selectedtype2;
   bool isDropdownSelected = false;
 
-
   int resultat = 0;
 
   final List<String> _modeenvoie = <String>['Express', 'Maritimes', 'Batterie'];
   final List<String> _etat = <String>[
     'Arrivé en chine',
-    'En cours envoie',
+    'En cours d\' envoie',
     'Arrivé à Mada',
     'Récuperer',
     'Retour en chine',
@@ -229,7 +230,7 @@ class _State extends State<Add> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: ()  {
+                    onPressed: () {
                       scanBarcode();
                     },
                     child: const Text("Scan"),
@@ -292,7 +293,7 @@ class _State extends State<Add> {
     setState(() {
       this.barcode = barcode;
     });
-    CollectionReference collectionReference =
+    /* CollectionReference collectionReference =
     FirebaseFirestore.instance.collection('colisClient');
     QuerySnapshot querySnapshot =
     await collectionReference.where('tracking', isEqualTo: barcode).get();
@@ -308,21 +309,23 @@ class _State extends State<Add> {
         codeclientEditingController.text = data['codeClient'];
         Fluttertoast.showToast(msg: 'mode  envoie ${data['modeEnvoi']}');
       });
-    }
-
+    }*/
   }
 
   void insert() async {
     if (_formKey.currentState!.validate()) {
-      if (isDropdownSelected) {  // Vérification de la sélection du menu déroulant
-        postDetailsToFirestore();
+      if (isDropdownSelected) {
+        // Vérification de la sélection du menu déroulant
+        // postDetailsToFirestore();
+        insertColis();
       } else {
-        Fluttertoast.showToast(msg: "Veuillez sélectionner un mode envoie ou état");
+        Fluttertoast.showToast(
+            msg: "Veuillez sélectionner un mode envoie ou état");
       }
     }
   }
 
-  postDetailsToFirestore() async {
+  /* postDetailsToFirestore() async {
     FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
 
     /*QuerySnapshot querySnapshot = await firebaseFirestore
@@ -357,6 +360,35 @@ class _State extends State<Add> {
 
     await colisref.set(colisModel.toMap());
     Fluttertoast.showToast(msg: "Le colis a été ajouté avec succés");
+  }*/
+  Future<void> insertColis() async {
+    final response = await http.post(
+      Uri.parse('https://s-tradingmadagasikara.com/addColis.php'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({
+        'codeClient': codeclientEditingController.text,
+        'tracking': barcode,
+        'poids': double.parse(poidsEditingController.text),
+        'volume': double.parse(volumeEditingController.text),
+        'frais': int.parse(fraisdelivraisonEditingController.text),
+        'modeEnvoie': selectedtype2,
+        'etat': selectedtype,
+        'facture': calcul(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['data']['success'] == 1) {
+        Fluttertoast.showToast(msg: data['data']['message']);
+      } else {
+        Fluttertoast.showToast(msg: data['data']['message']);
+      }
+    } else {
+      print("Erreur HTTP: ${response.statusCode}");
+    }
   }
 
   int calcul() {

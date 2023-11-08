@@ -1,7 +1,7 @@
 import 'dart:core';
 
 class ColisModel {
-  String? colisid;
+  int?id;
   String? tracking;
   String? codeClient;
   double? poids;
@@ -10,10 +10,10 @@ class ColisModel {
   String? modeEnvoie;
   String? etat;
   int? facture;
-  DateTime? dateSaisie;
+  //DateTime? dateSaisie;
 
   ColisModel({
-    this.colisid,
+    this.id,
     this.tracking,
     this.codeClient,
     this.poids,
@@ -22,26 +22,24 @@ class ColisModel {
     this.modeEnvoie,
     this.etat,
     this.facture,
-    this.dateSaisie,
+    //this.dateSaisie,
   });
-  factory ColisModel.fromMap(map) {
-    return ColisModel(
-        colisid: map['colisid'],
-        tracking: map['tracking'],
-        codeClient: map['codeClient'],
-        poids: map['poids'],
-        volume: map['volume'],
-        frais: map['frais'],
-        modeEnvoie: map['modeEnvoie'],
-        etat: map['etat'],
-        facture: map['facture']);
 
-
-
+  ColisModel.fromJson(Map<String, dynamic> json) {
+    id=int.tryParse(json['id']?? '0');
+    tracking = json['tracking'] as String;
+    codeClient = json['codeClient'] as String;
+    poids = double.tryParse(json['poids'] ?? '0.0');
+    volume = double.tryParse(json['volume'] ?? '0.0');
+    frais = int.tryParse(json['frais'] ?? '0');
+    modeEnvoie = json['modeEnvoie'] as String;
+    etat = json['etat'] as String;
+    facture = int.tryParse(json['facture'] ?? '0');
   }
+
   Map<String, dynamic> toMap() {
     return {
-      'colisid': colisid,
+      'id':id,
       'tracking': tracking,
       'codeClient': codeClient,
       'poids': poids,
@@ -50,7 +48,7 @@ class ColisModel {
       'modeEnvoie': modeEnvoie,
       'etat': etat,
       'facture': facture,
-      'dateSaisie':dateSaisie,
+      //'dateSaisie':dateSaisie,
     };
   }
 }

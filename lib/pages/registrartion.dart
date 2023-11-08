@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/model/user_model.dart';
 import 'package:s_trading/pages/home.dart';
@@ -15,13 +17,50 @@ class Registration extends StatefulWidget {
 class _RegistrationState extends State<Registration> {
   final _formKey = GlobalKey<FormState>();
 
-  final _auth = FirebaseAuth.instance;
+  //final _auth = FirebaseAuth.instance;
 
   final nomEditingController = TextEditingController();
   final prenomEditingController = TextEditingController();
   final emailEditingController = TextEditingController();
   final motdepassEditingController = TextEditingController();
   final confmotdepassEditingController = TextEditingController();
+
+  void register(String nom, String prenom, String email, String pass) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://s-tradingmadagasikara.com/registration.php'),
+        body: {
+          "nom": nom,
+          "prenom": prenom,
+          "email": email,
+          "password": pass,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        if (data["data"]["succes"] == 1) {
+          UserModel user = UserModel(
+            email: email,
+            nom: data["data"]["nom"],
+            prenom: data["data"]["prenom"],
+          );
+          UserModel.saveUser(user);
+          Fluttertoast.showToast(msg: "Le compte a été créé avec succès");
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => Home()));
+        } else {
+          Fluttertoast.showToast(msg: "${data["data"]["msg"]}");
+        }
+      } else {
+        print("Erreur HTTP: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Erreur lors de la requête HTTP: $e");
+    }
+    emailEditingController.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     final nomField = TextFormField(
@@ -153,7 +192,11 @@ class _RegistrationState extends State<Registration> {
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
         minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
-          signup(emailEditingController.text, motdepassEditingController.text);
+          //signup(emailEditingController.text, motdepassEditingController.text);
+          if (_formKey.currentState!.validate()) {
+            register(nomEditingController.text, prenomEditingController.text,
+                emailEditingController.text, motdepassEditingController.text);
+          }
         },
         child: const Text(
           "Créer",
@@ -220,7 +263,7 @@ class _RegistrationState extends State<Registration> {
         ));
   }
 
-  void signup(String email, String password) async {
+  /*void signup(String email, String password) async {
     if (_formKey.currentState!.validate()) {
       await _auth
           .createUserWithEmailAndPassword(email: email, password: password)
@@ -260,5 +303,5 @@ class _RegistrationState extends State<Registration> {
         context,
         MaterialPageRoute(builder: (context) => const Home()),
         (route) => false);*/
-  }
+  }*/
 }

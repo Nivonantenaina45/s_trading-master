@@ -1,8 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:s_trading/pages/home.dart';
 import 'package:s_trading/pages/registrartion.dart';
+import 'package:http/http.dart' as http;
+
+import '../model/user_model.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -19,8 +24,40 @@ class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  //firebase
-  final _auth = FirebaseAuth.instance;
+  void login(String email, String pass) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://s-tradingmadagasikara.com/login.php'),
+        body: {
+          "email": email,
+          "password": pass,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+
+        if (data["data"]["success"] == 1) {
+          UserModel user = UserModel(
+            email: email,
+            nom: data["data"]["nom"],
+            prenom: data["data"]["prenom"],
+          );
+          UserModel.saveUser(user);
+
+          Fluttertoast.showToast(msg: "Connexion réussie");
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => Home()));
+        } else {
+          Fluttertoast.showToast(msg: data["data"]["message"]);
+        }
+      } else {
+        print("Erreur HTTP: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Erreur lors de la requête HTTP: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +122,8 @@ class _LoginState extends State<Login> {
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
         minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
-          signIn(emailController.text, passwordController.text);
+          //signIn(emailController.text, passwordController.text);
+          login(emailController.text, passwordController.text);
         },
         child: const Text(
           "Se connecter",
@@ -156,7 +194,7 @@ class _LoginState extends State<Login> {
         ));
   }
 
-  void signIn(String email, String page) async {
+  /*void signIn(String email, String page) async {
     if (_formKey.currentState!.validate()) {
       await _auth
           .signInWithEmailAndPassword(email: email, password: page)
@@ -169,5 +207,5 @@ class _LoginState extends State<Login> {
         Fluttertoast.showToast(msg: e!.message);
       });
     }
-  }
+  }*/
 }

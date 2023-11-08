@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:s_trading/model/user_model.dart';
@@ -8,6 +6,9 @@ import 'package:s_trading/pages/infos_colis.dart';
 import 'package:s_trading/pages/generer.dart';
 import 'package:s_trading/pages/grouper.dart';
 import 'package:s_trading/pages/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'detaille_info_colis.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -17,19 +18,21 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  User? user = FirebaseAuth.instance.currentUser;
+  //User? user = FirebaseAuth.instance.currentUser;
   UserModel loggedInUser = UserModel();
 
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance
-        .collection("users")
-        .doc(user!.uid)
-        .get()
-        .then((value) {
-      loggedInUser = UserModel.fromMap(value.data());
-      setState(() {});
+    UserModel.getUser().then((user) {
+      if (user != null) {
+        setState(() {
+          loggedInUser = user;
+        });
+      } else {
+        // Handle the case where the user is not logged in
+        // You might want to navigate to the login screen here
+      }
     });
   }
 
@@ -137,7 +140,7 @@ class _HomeState extends State<Home> {
             }
             if (index == 2) {
               Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const Etats()));
+                  MaterialPageRoute(builder: (context) => ColisListPage()));
             }
             if (index == 3) {
               Navigator.push(context,
@@ -164,7 +167,8 @@ class _HomeState extends State<Home> {
 }
 
 Future<void> logout(BuildContext context) async {
-  await FirebaseAuth.instance.signOut();
+  SharedPreferences pref = await SharedPreferences.getInstance();
+  pref.remove("user");
   Navigator.of(context)
       .pushReplacement(MaterialPageRoute(builder: (context) => const Login()));
 }
