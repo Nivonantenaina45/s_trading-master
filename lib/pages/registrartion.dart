@@ -263,6 +263,7 @@ class _RegistrationState extends State<Registration> {
         ));
   }
 
+
   /*void signup(String email, String password) async {
     if (_formKey.currentState!.validate()) {
       await _auth

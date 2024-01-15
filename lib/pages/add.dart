@@ -1,8 +1,5 @@
 import 'dart:convert';
 import 'dart:ffi';
-
-//import 'package:cloud_firestore/cloud_firestore.dart';
-//import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,10 +25,10 @@ class _State extends State<Add> {
   final fraisdelivraisonEditingController = TextEditingController();
   var selectedtype, selectedtype2;
   bool isDropdownSelected = false;
-
+  DateTime dateSaisie = DateTime.now();
   int resultat = 0;
 
-  final List<String> _modeenvoie = <String>['Express', 'Maritimes', 'Batterie'];
+  final List<String> _modeenvoie = <String>['Express', 'Maritimes', 'Batterie','Aucun'];
   final List<String> _etat = <String>[
     'Arrivé en chine',
     'En cours d\' envoie',
@@ -293,24 +290,30 @@ class _State extends State<Add> {
     setState(() {
       this.barcode = barcode;
     });
-    /* CollectionReference collectionReference =
-    FirebaseFirestore.instance.collection('colisClient');
-    QuerySnapshot querySnapshot =
-    await collectionReference.where('tracking', isEqualTo: barcode).get();
 
-    if (querySnapshot.docs.isEmpty) {
-      print('Barcode not found.');
-    } else {
-      // Barcode found in Firestore
-      var doc = querySnapshot.docs.first;
-      Map<String, dynamic> data = doc.data() as Map<String,dynamic>;
-      // Update the state with the retrieved data
-      setState(() {
-        codeclientEditingController.text = data['codeClient'];
-        Fluttertoast.showToast(msg: 'mode  envoie ${data['modeEnvoi']}');
-      });
-    }*/
+    //PHP API
+    final apiUrl = 'https://s-tradingmadagasikara.com/getColisClient.php?barcode=$barcode';
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 200) {
+        // Parse the JSON response
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        // Update the state with the retrieved data
+        setState(() {
+          codeclientEditingController.text = data['codeClient'];
+          Fluttertoast.showToast(msg: 'mode envoi ${data['modeEnvoie']}');
+        });
+      } else {
+        print('Barcode not found.');
+      }
+    } catch (error) {
+      print('Error: $error');
+    }
   }
+
 
   void insert() async {
     if (_formKey.currentState!.validate()) {
@@ -324,77 +327,71 @@ class _State extends State<Add> {
       }
     }
   }
-
-  /* postDetailsToFirestore() async {
-    FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
-
-    /*QuerySnapshot querySnapshot = await firebaseFirestore
-        .collection("colisDetails")
-        .where('tracking', isEqualTo: barcode)
-        .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      Fluttertoast.showToast(msg: "Ce tracking est déjà ajouté!!.");
-      return; // Arrêter l'ajout si un doublon est trouvé
-    }*/
-
-    ColisModel colisModel = ColisModel();
-
-    double poidstr = double.parse(poidsEditingController.text);
-    double volumestr = double.parse(volumeEditingController.text);
-    int fraisdelivr = int.parse(fraisdelivraisonEditingController.text);
-    calcul();
-    final colisref = firebaseFirestore.collection("colisDetails").doc();
-    //writing all the value
-    colisModel.colisid = colisref.id;
-    colisModel.codeClient = codeclientEditingController.text;
-    colisModel.tracking = barcode;
-    colisModel.poids = poidstr;
-    colisModel.volume = volumestr;
-    colisModel.frais = fraisdelivr;
-    colisModel.modeEnvoie = selectedtype2;
-    colisModel.etat = selectedtype;
-    colisModel.facture = resultat;
-    colisModel.dateSaisie = DateTime.now();
-
-
-    await colisref.set(colisModel.toMap());
-    Fluttertoast.showToast(msg: "Le colis a été ajouté avec succés");
-  }*/
   Future<void> insertColis() async {
-    final response = await http.post(
-      Uri.parse('https://s-tradingmadagasikara.com/addColis.php'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode({
-        'codeClient': codeclientEditingController.text,
-        'tracking': barcode,
-        'poids': double.parse(poidsEditingController.text),
-        'volume': double.parse(volumeEditingController.text),
-        'frais': int.parse(fraisdelivraisonEditingController.text),
-        'modeEnvoie': selectedtype2,
-        'etat': selectedtype,
-        'facture': calcul(),
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('https://s-tradingmadagasikara.com/addColis.php'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
+          'codeClient': codeclientEditingController.text,
+          'tracking': barcode,
+          'poids': double.parse(poidsEditingController.text),
+          'volume': double.parse(volumeEditingController.text),
+          'frais': int.parse(fraisdelivraisonEditingController.text),
+          'modeEnvoie': selectedtype2,
+          'etat': selectedtype,
+          'facture': calcul(),
+          'dateSaisie': dateSaisie.toUtc().toIso8601String(),
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['data']['success'] == 1) {
-        Fluttertoast.showToast(msg: data['data']['message']);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == 1) {
+          showSuccessToast('Colis ajouté avec succès');
+        } else {
+          showFailureToast('Tracking déjà existant');
+        }
       } else {
-        Fluttertoast.showToast(msg: data['data']['message']);
+        showFailureToast('Erreur lors de la requête HTTP, code: ${response.statusCode}');
       }
-    } else {
-      print("Erreur HTTP: ${response.statusCode}");
+    } catch (error) {
+      showFailureToast('Erreur inattendue: $error');
+      print('$error');
     }
   }
+
+  void showSuccessToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
+  void showFailureToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
 
   int calcul() {
     int prixExpress = 88000;
     int prixbatterie = 185000;
-    int prixmaritime = 2136000;
+    int prixmaritime = 2208000;
     //int resultat = 0;
     double res2 = 0.0;
     double resd = 0.0;
@@ -422,6 +419,11 @@ class _State extends State<Add> {
 
     if (selectedtype2 == "Maritimes" && poids == 0) {
       resd = volume * prixmaritime;
+      resultat = resd.toInt() + fraisdelivr;
+      Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
+    }
+    if (selectedtype2 == "Aucun") {
+      resd = 0.0;
       resultat = resd.toInt() + fraisdelivr;
       Fluttertoast.showToast(msg: 'la valeur du colis est de $resultat Ar');
     }

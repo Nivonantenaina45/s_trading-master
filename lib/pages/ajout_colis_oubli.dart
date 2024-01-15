@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AjoutColisPage extends StatefulWidget {
   final String cartonTracking;
@@ -14,43 +15,53 @@ class _AjoutColisPageState extends State<AjoutColisPage> {
   String barcodecolis = '69563258O';
   List<String> numerosColis = [];
 
-  Future<void> sauvegarderColis(String cartonTracking, List<String> colis) async {
+  Future<void> sauvegarderColis(
+      String cartonTracking, String trackingColis) async {
+    final apiUrl = 'https://s-tradingmadagasikara.com/addColisforget.php';
+
     try {
-      // Recherchez le document du carton correspondant au tracking donné
-      QuerySnapshot cartonQuery = await FirebaseFirestore.instance.collection('cartons').where('tracking', isEqualTo: cartonTracking).get();
-
-      if (cartonQuery.docs.isNotEmpty) {
-        DocumentSnapshot cartonDoc = cartonQuery.docs.first;
-
-        List<dynamic> trackingColis = List.from(cartonDoc['trackingColis']);
-        trackingColis.addAll(colis);
-
-        // Mettez à jour le document du carton avec les nouveaux colis
-        await cartonDoc.reference.update({
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: {
+          'cartonTracking': cartonTracking,
           'trackingColis': trackingColis,
-        });
+        },
+      );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Colis sauvegardés avec succès dans le carton $cartonTracking'),
-          ),
-        );
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        if (responseData['success'] == 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Colis ajouter avec succés'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${responseData['message']}'),
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Le carton $cartonTracking n\'existe pas.'),
+            content: Text(
+                'Échec de la requête HTTP, code: ${response.statusCode}'),
           ),
         );
       }
-    } catch (e) {
+    } catch (error) {
+      print('Erreur lors de la requête HTTP: $error');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur lors de la sauvegarde du colis: $e'),
+          content: Text('Erreur lors de la requête HTTP: $error'),
         ),
       );
-      print('Erreur lors de la sauvegarde du colis: $e');
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,15 +104,24 @@ class _AjoutColisPageState extends State<AjoutColisPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  primary: Colors.blue, //background color of button
-                  elevation: 3, //elevation of button
-                  shape: RoundedRectangleBorder( //to set border radius to button
-                      borderRadius: BorderRadius.circular(30)
-                  ),
-                  padding: EdgeInsets.all(20) //content padding inside button
-              ),
+                  primary: Colors.blue,
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                  padding: EdgeInsets.all(20)),
               onPressed: () {
-                sauvegarderColis(widget.cartonTracking, numerosColis);
+                if (numerosColis.isNotEmpty) {
+                  for (String barcode in numerosColis) {
+                    sauvegarderColis(widget.cartonTracking, barcode);
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Aucun colis scanné. Veuillez scanner un colis avant de sauvegarder.'),
+                    ),
+                  );
+                }
               },
               child: Text("Sauvegarder"),
             ),
@@ -123,17 +143,9 @@ class _AjoutColisPageState extends State<AjoutColisPage> {
 
     if (barcodecolis != '-1') {
       setState(() {
-        numerosColis.add(barcodecolis); // Ajoutez le numéro de colis à la liste
+        numerosColis.add(barcodecolis);
         this.barcodecolis = barcodecolis;
       });
     }
   }
 }
-
-
-
-
-
-
-
-

@@ -1,13 +1,8 @@
 import 'dart:convert';
-
-//import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:s_trading/model/colis_list.dart';
-import 'package:s_trading/model/colis_model.dart';
-import '../model/carton.dart';
 import 'package:http/http.dart' as http;
 
 class AjoutGrouper extends StatefulWidget {
@@ -19,14 +14,13 @@ class AjoutGrouper extends StatefulWidget {
 
 class _AjoutGrouperState extends State<AjoutGrouper> {
   String barcode = '5269832';
-  String barcodecolis = '69563258O';
   final codeclientEditingController = TextEditingController();
   final List<String> _etat = <String>[
     'Arrivé en chine',
-    'en cours envoie',
-    'arrivé à Mada',
-    'récuperer',
-    'retour en chine',
+    'En cours d\'envoi',
+    'Arrivé à Mada',
+    'Récuperer',
+    'Retour en chine',
   ];
   var selectedtype;
   List<String> listeScans = [];
@@ -36,12 +30,12 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     final etat = DropdownButton(
       items: _etat
           .map((value) => DropdownMenuItem(
-                value: value,
-                child: Text(
-                  value,
-                  style: const TextStyle(color: Colors.black54),
-                ),
-              ))
+        value: value,
+        child: Text(
+          value,
+          style: const TextStyle(color: Colors.black54),
+        ),
+      ))
           .toList(),
       onChanged: (selectedetat) {
         if (kDebugMode) {
@@ -64,9 +58,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
       color: Colors.blue,
       child: MaterialButton(
         padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-        //minWidth: MediaQuery.of(context).size.width,
         onPressed: () {
-          //ajouterCartonAvecScans();
           ajouterCarton();
         },
         child: const Text(
@@ -88,74 +80,62 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
       ),
       body: Center(
         child: Column(
-            //mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              const SizedBox(height: 15),
-              const Text(
-                'Tracking du carton ',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
+          children: <Widget>[
+            const SizedBox(height: 15),
+            const Text(
+              'Tracking du carton ',
+              style: TextStyle(
+                fontSize: 22,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text(
+                  barcode,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    barcode,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  ElevatedButton(
-                    onPressed: () {
-                      scanBarcodeCarton();
-                    },
-                    child: const Text("Scan"),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              etat,
-              const SizedBox(height: 15),
-              const Text(
-                "Identité du colis",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                const SizedBox(height: 5),
+                ElevatedButton(
+                  onPressed: () {
+                    scanBarcodeCarton();
+                  },
+                  child: const Text("Scan"),
                 ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            etat,
+            const SizedBox(height: 15),
+            const Text(
+              "Identité du colis",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
               ),
-              const SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    barcodecolis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      scanBarcodeColis();
-                    },
-                    child: const Text("Scan"),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              // codeclientfield,
-              const SizedBox(height: 5),
-              saveButton,
-            ]),
+            ),
+            const SizedBox(height: 5),
+            ElevatedButton(
+              onPressed: () {
+                scanBarcodeColis();
+              },
+              child: const Text("Scan Colis"),
+            ),
+            const SizedBox(height: 5),
+            // Display scanned barcodes
+            Text('Scans: ${listeScans.join(", ")}'),
+            const SizedBox(height: 5),
+            saveButton,
+          ],
+        ),
       ),
     );
   }
@@ -218,7 +198,6 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
 
       if (validerColis == true) {
         setState(() {
-          this.barcodecolis = barcodecolis;
           listeScans.add(barcodecolis);
         });
       }
@@ -229,7 +208,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
     if (barcode.isEmpty || selectedtype == null || listeScans.isEmpty) {
       Fluttertoast.showToast(
           msg:
-              'Veuillez scanner un code-barres, sélectionner un état et ajouter des données de suivi.');
+          'Veuillez scanner un code-barres, sélectionner un état et ajouter des données de suivi.');
       return;
     }
 
@@ -239,6 +218,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
       "trackingColis": listeScans,
     };
 
+
     final apiUrl = 'https://s-tradingmadagasikara.com/addCarton.php';
 
     final response = await http.post(
@@ -247,7 +227,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
       headers: {'Content-Type': 'application/json'},
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 200) {
       // Carton ajouté avec succès
       print('Response Body: ${response.body}');
       Fluttertoast.showToast(msg: 'Carton ajouté avec succès');
@@ -266,45 +246,7 @@ class _AjoutGrouperState extends State<AjoutGrouper> {
       // Erreur interne du serveur ou autre
       print('HTTP Error: ${response.statusCode}');
       print('Response Body: ${response.body}');
-      Fluttertoast.showToast(msg: '${response.body}');
+      Fluttertoast.showToast(msg: 'Erreur lors de l\'ajout du carton');
     }
   }
-
-  /* Future<void> ajouterCarton(Carton carton) async {
-    CollectionReference cartonCollection = FirebaseFirestore.instance.collection('cartons');
-
-    Map<String, dynamic> cartonData = carton.toJson();
-
-    await cartonCollection.add(cartonData);
   }
-  void ajouterCartonAvecScans() {
-    // Créez un nouvel objet Carton avec les données du carton collectées auparavant
-    Carton nouveauCarton = Carton(
-        tracking: barcode,
-        etat: selectedtype,
-        trackingColis:listeScans);
-
-    // Appelez la fonction pour ajouter le carton à Firestore
-    ajouterCarton(nouveauCarton);
-    Fluttertoast.showToast(msg: "Les colis ont été ajouté dans le carton $barcode");
-  }*/
-
-/* postDetailsToFirestore() async {
-    //calling our firestore
-    //calling our user model
-    //sending these values
-    FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
-
-    ColisCodebarre colisCodebarre = ColisCodebarre();
-
-    //writing all the value
-    colisCodebarre.trackingCarton = barcode;
-    colisCodebarre.etat = selectedtype;
-    colisCodebarre.tracking = barcodecolis;
-
-    await firebaseFirestore
-        .collection("colisGrouper")
-        .add(colisCodebarre.toMap());
-    Fluttertoast.showToast(msg: "Le coli a été ajouté dans le carton $barcode");
-  }*/
-}
